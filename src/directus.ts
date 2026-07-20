@@ -87,6 +87,7 @@ class DirectusService {
         first_name: shopName,
         last_name: cleanSlug,
         description: shopName,
+        role: "5e13d3bc-e293-4720-90b5-d7a02871d34a"
       }),
     });
 
@@ -368,6 +369,49 @@ class DirectusService {
       stock: item.stock,
       price: item.price
     }));
+  }
+
+  async getAllInventory(): Promise<InventoryItem[]> {
+    const currentUser = this.getCurrentUser();
+    const headers: Record<string, string> = {};
+    if (currentUser?.token) {
+      headers['Authorization'] = `Bearer ${currentUser.token}`;
+    }
+
+    const response = await fetch(`${DIRECTUS_URL}/items/inventory?limit=1000`, { headers });
+    if (!response.ok) {
+      throw new Error(`خطا در دریافت کل موجودی انبار: ${response.statusText}`);
+    }
+
+    const res = await response.json();
+    const list = res.data || [];
+
+    return list.map((item: any) => ({
+      id: item.id,
+      product_id: item.product_id,
+      color_id: item.color_id,
+      size_id: item.size_id,
+      stock: item.stock,
+      price: item.price
+    }));
+  }
+
+  async updateInventoryItem(id: number, fields: { stock?: number; price?: number }): Promise<void> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) throw new Error("Authentication required.");
+
+    const response = await fetch(`${DIRECTUS_URL}/items/inventory/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentUser.token}`
+      },
+      body: JSON.stringify(fields)
+    });
+
+    if (!response.ok) {
+      throw new Error(`خطا در ویرایش آیتم انبار: ${response.statusText}`);
+    }
   }
 
   /**
