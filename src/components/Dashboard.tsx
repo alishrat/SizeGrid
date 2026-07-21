@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { locales } from '../locales';
 import { DirectusAPI } from '../directus';
 import { useRouter } from './Router';
-import { Product, InventoryItem, Color, Size } from '../types';
+import { Product, InventoryItem, Color, Size, SizeGuideTemplate, SizeGuideTemplateItem } from '../types';
 import {
   Grid3X3,
   Package,
@@ -31,7 +31,8 @@ import {
   Search,
   Warehouse,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Ruler
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -41,7 +42,7 @@ interface DashboardProps {
   setDarkMode: (val: boolean) => void;
 }
 
-type ActiveTab = 'products' | 'warehouse' | 'compressor' | 'settings';
+type ActiveTab = 'products' | 'warehouse' | 'compressor' | 'settings' | 'templates' | 'sizes';
 type EditSubTab = 'general' | 'guides' | 'matrix';
 
 export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: DashboardProps) {
@@ -66,6 +67,18 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Reusable Size Guide Templates
+  const [templatesList, setTemplatesList] = useState<SizeGuideTemplate[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<SizeGuideTemplate | null>(null);
+  const [templateFormName, setTemplateFormName] = useState('');
+  const [templateFormState, setTemplateFormState] = useState<Record<string, { enabled: boolean; min_height: number; max_height: number; min_weight: number; max_weight: number; shapes: { slim: boolean; athletic: boolean; heavy: boolean } }>>({});
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Custom Sizes State
+  const [newSizeName, setNewSizeName] = useState('');
+  const [newSizeSortOrder, setNewSizeSortOrder] = useState(10);
+  const [creatingSize, setCreatingSize] = useState(false);
+
   // Active Panel/Tab
   const [activeTab, setActiveTab] = useState<ActiveTab>('products');
 
@@ -84,6 +97,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
   const [selectedColorIds, setSelectedColorIds] = useState<number[]>([]);
   const [selectedSizeIds, setSelectedSizeIds] = useState<number[]>([]);
   const [prodFormStatus, setProdFormStatus] = useState<'idle' | 'saving'>('idle');
+
+  // Product Form Sizing Architecture states
+  const [prodFormTemplateOption, setProdFormTemplateOption] = useState<'template' | 'new_template' | 'custom'>('custom');
+  const [prodFormTemplateId, setProdFormTemplateId] = useState<number | string | 'custom' | null>(null);
+  const [newTemplateName, setNewTemplateName] = useState('');
 
   // Matrix Editor State within Edit Form
   const [matrixGridState, setMatrixGridState] = useState<Record<string, { stock: number; price: number; enabled: boolean }>>({});
@@ -119,16 +137,18 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     if (!currentUser) return;
     setLoading(true);
     try {
-      const [prodsList, colorsList, sizesList, allInv] = await Promise.all([
+      const [prodsList, colorsList, sizesList, allInv, templates] = await Promise.all([
         DirectusAPI.getProducts(),
         DirectusAPI.getColors(),
         DirectusAPI.getSizes(),
-        DirectusAPI.getAllInventory()
+        DirectusAPI.getAllInventory(),
+        DirectusAPI.getSizeGuideTemplates()
       ]);
       setProducts(prodsList);
       setColors(colorsList);
       setSizes(sizesList.sort((a, b) => a.sort_order - b.sort_order));
       setWarehouseInventory(allInv);
+      setTemplatesList(templates);
     } catch (err: any) {
       console.error("Dashboard error:", err);
       const errMsg = err?.message || String(err);
@@ -212,6 +232,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       };
     });
     setSizeGuidesFormState(formState);
+    setProdFormTemplateOption('custom');
+    setProdFormTemplateId(null);
+    setNewTemplateName('');
   };
 
   const triggerEditProductMode = async (prod: Product) => {
@@ -296,6 +319,15 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       });
       setSizeGuidesFormState(formState);
 
+      if (prod.size_guide_template_id) {
+        setProdFormTemplateOption('template');
+        setProdFormTemplateId(prod.size_guide_template_id);
+      } else {
+        setProdFormTemplateOption('custom');
+        setProdFormTemplateId(null);
+      }
+      setNewTemplateName('');
+
     } catch (e) {
       setError(isRtl ? "خطا در دریافت جزئیات ابعادی کالا." : "Failed to load product dimensional configs.");
     }
@@ -323,7 +355,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       description_en: prodFormDescEn,
       base_price: Number(prodFormBasePrice),
       category: prodFormCategory,
-      image: prodFormImage
+      image: prodFormImage,
+      size_guide_template_id: prodFormTemplateId && prodFormTemplateId !== 'custom' ? Number(prodFormTemplateId) : null
     };
 
     try {
@@ -469,37 +502,113 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     setError('');
 
     try {
-      // Walk through only the chosen sizes of this product
-      for (const szId of selectedSizeIds) {
-        const formCell = sizeGuidesFormState[szId];
-        const existingGuide = sizeGuidesList.find(g => g.size_id === szId);
-
-        if (formCell && formCell.enabled) {
-          const measurements = {
-            min_height: Number(formCell.min_height),
-            max_height: Number(formCell.max_height),
-            min_weight: Number(formCell.min_weight),
-            max_weight: Number(formCell.max_weight),
-            shapes: formCell.shapes
-          };
-          await DirectusAPI.saveSizeGuide(
-            isEditingProd.id,
-            szId,
-            measurements,
-            existingGuide?.id
-          );
-        } else {
+      if (prodFormTemplateOption === 'template') {
+        if (!prodFormTemplateId) {
+          throw new Error(isRtl ? "لطفاً ابتدا قالب مورد نظر را انتخاب کنید." : "Please choose a template first.");
+        }
+        // Save template ID on product
+        await DirectusAPI.updateProduct(isEditingProd.id, {
+          size_guide_template_id: Number(prodFormTemplateId)
+        });
+        
+        // Delete product specific size guides to avoid duplicate results
+        for (const szId of selectedSizeIds) {
+          const existingGuide = sizeGuidesList.find(g => g.size_id === szId);
           if (existingGuide) {
             await DirectusAPI.deleteSizeGuide(existingGuide.id);
           }
         }
+        
+        setSuccess(isRtl ? "قالب سایزبندی با موفقیت به این کالا تخصیص یافت." : "Sizing template assigned successfully.");
+      } 
+      else if (prodFormTemplateOption === 'new_template') {
+        if (!newTemplateName.trim()) {
+          throw new Error(isRtl ? "لطفاً نام قالب را وارد کنید." : "Template name is required.");
+        }
+        
+        // Assemble measurements
+        const measurements: SizeGuideTemplateItem[] = [];
+        sizes.forEach(sz => {
+          const cell = sizeGuidesFormState[sz.id];
+          if (cell && cell.enabled) {
+            measurements.push({
+              size_id: sz.id,
+              min_height: Number(cell.min_height),
+              max_height: Number(cell.max_height),
+              min_weight: Number(cell.min_weight),
+              max_weight: Number(cell.max_weight),
+              shapes: cell.shapes
+            });
+          }
+        });
+
+        if (measurements.length === 0) {
+          throw new Error(isRtl ? "لطفاً حداقل برای یک سایز، راهنمای ابعادی را تکمیل کنید." : "At least one sizing rule must be configured.");
+        }
+
+        // Create new template
+        const newTpl = await DirectusAPI.createSizeGuideTemplate(newTemplateName, measurements);
+        
+        // Save template ID on product
+        await DirectusAPI.updateProduct(isEditingProd.id, {
+          size_guide_template_id: newTpl.id
+        });
+
+        // Delete any local guides to avoid duplicate results
+        for (const szId of selectedSizeIds) {
+          const existingGuide = sizeGuidesList.find(g => g.size_id === szId);
+          if (existingGuide) {
+            await DirectusAPI.deleteSizeGuide(existingGuide.id);
+          }
+        }
+
+        // Reload templates list
+        const tpls = await DirectusAPI.getSizeGuideTemplates();
+        setTemplatesList(tpls);
+
+        setSuccess(isRtl ? "قالب سایزبندی جدید ساخته و با موفقیت به کالا تخصیص یافت." : "New sizing template registered and assigned successfully.");
+      }
+      else {
+        // 'custom' overrides
+        // 1. Remove size template mapping from product
+        await DirectusAPI.updateProduct(isEditingProd.id, {
+          size_guide_template_id: null
+        });
+
+        // 2. Save custom rows in size_guides collection
+        for (const szId of selectedSizeIds) {
+          const formCell = sizeGuidesFormState[szId];
+          const existingGuide = sizeGuidesList.find(g => g.size_id === szId);
+
+          if (formCell && formCell.enabled) {
+            const measurements = {
+              min_height: Number(formCell.min_height),
+              max_height: Number(formCell.max_height),
+              min_weight: Number(formCell.min_weight),
+              max_weight: Number(formCell.max_weight),
+              shapes: formCell.shapes
+            };
+            await DirectusAPI.saveSizeGuide(
+              isEditingProd.id,
+              szId,
+              measurements,
+              existingGuide?.id
+            );
+          } else {
+            if (existingGuide) {
+              await DirectusAPI.deleteSizeGuide(existingGuide.id);
+            }
+          }
+        }
+
+        setSuccess(isRtl ? "راهنمای ابعادی اختصاصی با موفقیت ثبت شد." : "Custom sizing guides synced successfully.");
       }
 
-      setSuccess(isRtl ? "راهنمای ابعادی سایز با موفقیت ثبت شد." : "Size guides compiled successfully.");
       setTimeout(() => setSuccess(''), 3000);
       await triggerEditProductMode(isEditingProd);
-    } catch (e) {
-      setError(isRtl ? "خطا در ذخیره‌سازی جزئیات راهنمای سایز." : "Failed to sync size guide tables.");
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || (isRtl ? "خطا در ذخیره‌سازی جزئیات راهنمای سایز." : "Failed to sync size guide tables."));
     } finally {
       setSavingSizeGuides(false);
     }
@@ -605,6 +714,50 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     }
   };
 
+  // --- SIZE CRUD FUNCTIONS ---
+  const handleCreateSize = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSizeName.trim()) {
+      setError(isRtl ? "نام سایز الزامی است" : "Size name is required.");
+      return;
+    }
+    setCreatingSize(true);
+    setError('');
+    setSuccess('');
+    try {
+      await DirectusAPI.createSize(newSizeName.trim(), Number(newSizeSortOrder));
+      setSuccess(isRtl ? "سایز جدید با موفقیت اضافه شد." : "New custom size added successfully.");
+      setNewSizeName('');
+      setNewSizeSortOrder(prev => prev + 2);
+      // Reload sizes list
+      const sizesList = await DirectusAPI.getSizes();
+      setSizes(sizesList.sort((a, b) => a.sort_order - b.sort_order));
+      setTimeout(() => setSuccess(''), 3500);
+    } catch (err: any) {
+      setError(err?.message || "Error creating size.");
+    } finally {
+      setCreatingSize(false);
+    }
+  };
+
+  const handleDeleteSize = async (id: number, name: string) => {
+    if (!confirm(isRtl ? `آیا از حذف سایز "${name}" اطمینان دارید؟` : `Are you sure you want to delete size "${name}"?`)) {
+      return;
+    }
+    setError('');
+    setSuccess('');
+    try {
+      await DirectusAPI.deleteSize(id);
+      setSuccess(isRtl ? "سایز با موفقیت حذف شد." : "Custom size deleted successfully.");
+      // Reload sizes list
+      const sizesList = await DirectusAPI.getSizes();
+      setSizes(sizesList.sort((a, b) => a.sort_order - b.sort_order));
+      setTimeout(() => setSuccess(''), 3500);
+    } catch (err: any) {
+      setError(err?.message || "Error deleting size.");
+    }
+  };
+
   // Filter products owned by user
   const userProducts = products.filter(p => p.created_by === currentUser?.id);
   const activeProductsCount = userProducts.length;
@@ -671,6 +824,22 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             >
               <Warehouse className="w-4 h-4" />
               <span>{isRtl ? "انبار و موجودی" : "Warehouse & Stock"}</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('templates'); setIsEditingProd(null); }}
+              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'templates' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+            >
+              <Ruler className="w-4 h-4" />
+              <span>{isRtl ? "قالب‌های سایزبندی" : "Size Guide Templates"}</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('sizes'); setIsEditingProd(null); }}
+              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'sizes' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+            >
+              <Sliders className="w-4 h-4" />
+              <span>{isRtl ? "مدیریت سایزها" : "Size Management"}</span>
             </button>
 
             <button
@@ -741,6 +910,20 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                 <Warehouse className="w-4 h-4" />
               </button>
               <button
+                onClick={() => { setActiveTab('templates'); setIsEditingProd(null); }}
+                className={`p-1.5 rounded-md ${activeTab === 'templates' ? 'bg-sky-600 text-white' : 'text-neutral-400'}`}
+                title={isRtl ? "قالب‌های سایز" : "Size Templates"}
+              >
+                <Ruler className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => { setActiveTab('sizes'); setIsEditingProd(null); }}
+                className={`p-1.5 rounded-md ${activeTab === 'sizes' ? 'bg-sky-600 text-white' : 'text-neutral-400'}`}
+                title={isRtl ? "مدیریت سایزها" : "Size Management"}
+              >
+                <Sliders className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => { setActiveTab('compressor'); setIsEditingProd(null); }}
                 className={`p-1.5 rounded-md ${activeTab === 'compressor' ? 'bg-sky-600 text-white' : 'text-neutral-400'}`}
                 title={t.image_compressor}
@@ -762,6 +945,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               <span className="text-sky-500 font-black">
                 {activeTab === 'products' ? (isEditingProd ? (isEditingProd.id === 0 ? t.add_product : t.edit_product) : (isRtl ? "کاتالوگ کالاها" : "Catalog")) : ''}
                 {activeTab === 'warehouse' ? (isRtl ? "مدیریت انبار" : "Warehouse") : ''}
+                {activeTab === 'templates' ? (isRtl ? "قالب‌های سایزبندی" : "Size Templates") : ''}
+                {activeTab === 'sizes' ? (isRtl ? "مدیریت سایزها" : "Size Management") : ''}
                 {activeTab === 'compressor' ? t.image_compressor : ''}
                 {activeTab === 'settings' ? t.store_settings : ''}
               </span>
@@ -1164,153 +1349,265 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       {/* SUBTAB 2: SIZE GUIDES EDITOR FOR THE CHOSEN SIZES */}
                       {editTab === 'guides' && isEditingProd.id > 0 && (
                         <div className="space-y-6">
-                          <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg text-xs flex items-center gap-2.5">
-                            <Info className="w-4 h-4 text-indigo-400" />
-                            <span>
-                              {isRtl
-                                ? "راهنما: مشخص کنید هر سایز لباس برای خریداران با چه حدود قد و وزنی طراحی شده است تا ویجت هوشمند بتواند سایز مناسب را به آنها پیشنهاد دهد."
-                                : "Specify the physical parameters for each selected size of this garment to run the advisor calculator."}
-                            </span>
-                          </div>
+                          {/* Sizing Architecture Choice */}
+                          <div className="p-4 bg-neutral-900/60 border border-neutral-800 rounded-xl space-y-4">
+                            <div className="text-xs font-bold text-neutral-400">{isRtl ? "۱. تعیین شیوه مدیریت سایزبندی و قوانین هوشمند:" : "1. Sizing Strategy & Intelligent Rules:"}</div>
+                            <div className="grid sm:grid-cols-3 gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setProdFormTemplateOption('template')}
+                                className={`p-3 rounded-xl border text-center transition-all ${
+                                  prodFormTemplateOption === 'template'
+                                    ? 'bg-sky-500/10 border-sky-500 text-sky-400 font-extrabold shadow-md'
+                                    : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60'
+                                }`}
+                              >
+                                <div className="text-xs font-black">{isRtl ? "استفاده از قالب‌های آماده" : "Select Existing Template"}</div>
+                                <div className="text-[10px] opacity-60 mt-0.5">{isRtl ? "انتخاب الگوهای اندازه‌گیری عمومی" : "Assign reusable guidelines"}</div>
+                              </button>
 
-                          <div className="space-y-4">
-                            {sizes
-                              .filter(sz => selectedSizeIds.includes(sz.id))
-                              .map(sz => {
-                                const cell = sizeGuidesFormState[sz.id] || {
-                                  enabled: false,
-                                  min_height: 150,
-                                  max_height: 180,
-                                  min_weight: 50,
-                                  max_weight: 80,
-                                  shapes: { slim: true, athletic: true, heavy: false }
-                                };
+                              <button
+                                type="button"
+                                onClick={() => setProdFormTemplateOption('new_template')}
+                                className={`p-3 rounded-xl border text-center transition-all ${
+                                  prodFormTemplateOption === 'new_template'
+                                    ? 'bg-sky-500/10 border-sky-500 text-sky-400 font-extrabold shadow-md'
+                                    : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60'
+                                }`}
+                              >
+                                <div className="text-xs font-black">{isRtl ? "ساخت و تخصیص قالب جدید" : "Create & Assign Template"}</div>
+                                <div className="text-[10px] opacity-60 mt-0.5">{isRtl ? "ساخت الگوی عمومی مجدد مصرف" : "Register new reusable preset"}</div>
+                              </button>
 
-                                return (
-                                  <div
-                                    key={sz.id}
-                                    className={`p-4 rounded-xl border transition-all ${
-                                      cell.enabled 
-                                        ? 'bg-sky-500/5 border-sky-500/20' 
-                                        : 'bg-neutral-900/10 border-neutral-800 opacity-60'
-                                    }`}
-                                  >
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                      {/* Identifier / Title */}
-                                      <div className="flex items-center gap-4 shrink-0 min-w-[150px]">
-                                        <div className="w-10 h-10 rounded-xl bg-sky-600/10 text-sky-400 font-extrabold text-xs flex items-center justify-center border border-sky-500/20">
-                                          {sz.name}
-                                        </div>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                          <input
-                                            type="checkbox"
-                                            checked={cell.enabled}
-                                            onChange={(e) => handleSizeGuideCellChange(sz.id, 'enabled', null, e.target.checked)}
-                                            className="rounded border-neutral-700 bg-neutral-900 text-sky-600 focus:ring-sky-500 w-4 h-4"
-                                          />
-                                          <span className="text-xs font-black text-neutral-300">
-                                            {cell.enabled ? (isRtl ? "راهنما فعال است" : "Active Guide") : (isRtl ? "فاقد بازه علمی" : "No rules")}
-                                          </span>
-                                        </label>
-                                      </div>
+                              <button
+                                type="button"
+                                onClick={() => setProdFormTemplateOption('custom')}
+                                className={`p-3 rounded-xl border text-center transition-all ${
+                                  prodFormTemplateOption === 'custom'
+                                    ? 'bg-sky-500/10 border-sky-500 text-sky-400 font-extrabold shadow-md'
+                                    : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60'
+                                }`}
+                              >
+                                <div className="text-xs font-black">{isRtl ? "مقادیر اختصاصی محصول" : "Custom rules for item"}</div>
+                                <div className="text-[10px] opacity-60 mt-0.5">{isRtl ? "تنظیم قوانین جداگانه مستقل" : "Configure direct boundaries"}</div>
+                              </button>
+                            </div>
 
-                                      {cell.enabled ? (
-                                        <div className="flex-1 grid sm:grid-cols-3 gap-6">
-                                          {/* Height bounds */}
-                                          <div className="space-y-1.5">
-                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "حدود قد مناسب (سانتی‌متر):" : "Height Range (cm):"}</span>
-                                            <div className="flex items-center gap-1.5">
-                                              <input
-                                                type="number"
-                                                value={cell.min_height}
-                                                onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_height', null, Number(e.target.value))}
-                                                className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
-                                              />
-                                              <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
-                                              <input
-                                                type="number"
-                                                value={cell.max_height}
-                                                onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_height', null, Number(e.target.value))}
-                                                className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
-                                              />
+                            {prodFormTemplateOption === 'template' && (
+                              <div className="space-y-3 pt-2">
+                                <label className="block text-xs font-bold text-neutral-300">{isRtl ? "الگوی سایزبندی آماده را انتخاب کنید:" : "Choose a template profile:"}</label>
+                                <select
+                                  value={prodFormTemplateId || ''}
+                                  onChange={(e) => setProdFormTemplateId(e.target.value)}
+                                  className="w-full px-3 py-2.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                >
+                                  <option value="">{isRtl ? "-- انتخاب قالب --" : "-- Choose Sizing Template --"}</option>
+                                  {templatesList.map(tpl => (
+                                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                                  ))}
+                                </select>
+
+                                {prodFormTemplateId && (
+                                  <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-3">
+                                    <div className="text-xs font-black text-sky-400 flex items-center gap-1.5">
+                                      <Ruler className="w-3.5 h-3.5" />
+                                      <span>{isRtl ? "قوانین اندازه‌گیری پیش‌نمایش قالب:" : "Preview of template rules:"}</span>
+                                    </div>
+                                    <div className="grid gap-2">
+                                      {(() => {
+                                        const selectedTpl = templatesList.find(t => String(t.id) === String(prodFormTemplateId));
+                                        if (!selectedTpl) return <p className="text-[10px] text-neutral-500 italic">{isRtl ? "قالب پیدا نشد" : "Template not found"}</p>;
+                                        if (!selectedTpl.measurements || selectedTpl.measurements.length === 0) {
+                                          return <p className="text-[10px] text-neutral-500 italic">{isRtl ? "این قالب فاقد هرگونه قانون اندازه‌گیری است." : "No parameters configured in this template."}</p>;
+                                        }
+                                        return selectedTpl.measurements.map((m, idx) => {
+                                          const sizeName = sizes.find(s => s.id === m.size_id)?.name || `Size ID: ${m.size_id}`;
+                                          return (
+                                            <div key={idx} className="flex items-center justify-between text-[11px] p-2 bg-neutral-900 rounded-lg border border-neutral-800/60">
+                                              <span className="font-bold text-sky-400 bg-sky-600/10 px-2.5 py-0.5 rounded-md border border-sky-500/15">{sizeName}</span>
+                                              <span className="text-neutral-300 font-extrabold">
+                                                {isRtl ? `قد: ${m.min_height} تا ${m.max_height} سم` : `Height: ${m.min_height} - ${m.max_height} cm`} | 
+                                                {isRtl ? ` وزن: ${m.min_weight} تا ${m.max_weight} کگ` : ` Weight: ${m.min_weight} - ${m.max_weight} kg`}
+                                              </span>
+                                              <span className="text-neutral-500 text-[10px] font-semibold">
+                                                {m.shapes.slim ? (isRtl ? "لاغر " : "Slim ") : ""}{m.shapes.athletic ? (isRtl ? "ورزشکار " : "Athletic ") : ""}{m.shapes.heavy ? (isRtl ? "توپر" : "Heavy") : ""}
+                                              </span>
                                             </div>
-                                          </div>
-
-                                          {/* Weight bounds */}
-                                          <div className="space-y-1.5">
-                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "حدود وزن مناسب (کیلوگرم):" : "Weight Range (kg):"}</span>
-                                            <div className="flex items-center gap-1.5">
-                                              <input
-                                                type="number"
-                                                value={cell.min_weight}
-                                                onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_weight', null, Number(e.target.value))}
-                                                className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-indigo-400 font-extrabold"
-                                              />
-                                              <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
-                                              <input
-                                                type="number"
-                                                value={cell.max_weight}
-                                                onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_weight', null, Number(e.target.value))}
-                                                className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-indigo-400 font-extrabold"
-                                              />
-                                            </div>
-                                          </div>
-
-                                          {/* Body shapes */}
-                                          <div className="space-y-1.5">
-                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "سازگاری با ساختار بدنی:" : "Compatible Body Shapes:"}</span>
-                                            <div className="flex flex-wrap gap-1.5">
-                                              {/* Slim */}
-                                              <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
-                                                cell.shapes.slim ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
-                                              }`}>
-                                                <input
-                                                  type="checkbox"
-                                                  checked={cell.shapes.slim}
-                                                  onChange={(e) => handleSizeGuideCellChange(sz.id, 'shapes', 'slim', e.target.checked)}
-                                                  className="hidden"
-                                                />
-                                                <span>{isRtl ? "لاغر" : "Slim"}</span>
-                                              </label>
-
-                                              {/* Athletic */}
-                                              <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
-                                                cell.shapes.athletic ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
-                                              }`}>
-                                                <input
-                                                  type="checkbox"
-                                                  checked={cell.shapes.athletic}
-                                                  onChange={(e) => handleSizeGuideCellChange(sz.id, 'shapes', 'athletic', e.target.checked)}
-                                                  className="hidden"
-                                                />
-                                                <span>{isRtl ? "ورزشکار" : "Athletic"}</span>
-                                              </label>
-
-                                              {/* Heavy */}
-                                              <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
-                                                cell.shapes.heavy ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
-                                              }`}>
-                                                <input
-                                                  type="checkbox"
-                                                  checked={cell.shapes.heavy}
-                                                  onChange={(e) => handleSizeGuideCellChange(sz.id, 'shapes', 'heavy', e.target.checked)}
-                                                  className="hidden"
-                                                />
-                                                <span>{isRtl ? "توپر" : "Heavy"}</span>
-                                              </label>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="flex-1 text-right text-[10px] text-neutral-500 font-semibold italic">
-                                          {isRtl ? "راهنمای ابعادی برای این سایز لباس تعریف نشده است." : "No sizing guides mapped for this size option."}
-                                        </div>
-                                      )}
+                                          );
+                                        });
+                                      })()}
                                     </div>
                                   </div>
-                                );
-                              })}
+                                )}
+                              </div>
+                            )}
+
+                            {prodFormTemplateOption === 'new_template' && (
+                              <div className="space-y-3 pt-2 border-t border-neutral-800/40">
+                                <label className="block text-xs font-bold text-neutral-300">{isRtl ? "نام قالب سایزبندی جدید عمومی:" : "New Sizing Template Profile Name:"}</label>
+                                <input
+                                  type="text"
+                                  placeholder={isRtl ? "مثلا: استاندارد تی‌شرت لش" : "e.g., Standard Oversized Tees"}
+                                  value={newTemplateName}
+                                  onChange={(e) => setNewTemplateName(e.target.value)}
+                                  className="w-full px-3 py-2.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                />
+                              </div>
+                            )}
                           </div>
+
+                          {/* Manual Input Grid (Required for custom overrides or defining new template parameters) */}
+                          {(prodFormTemplateOption === 'custom' || prodFormTemplateOption === 'new_template') && (
+                            <div className="space-y-4">
+                              <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg text-xs flex items-center gap-2.5">
+                                <Info className="w-4 h-4 text-indigo-400" />
+                                <span>
+                                  {isRtl
+                                    ? "راهنما: محدوده ابعادی خریدار (قد و وزن و ساختار بدنی) هر سایز را تعریف کنید. این اطلاعات برای تخمین هوشمند سایز خریداران اعمال می‌شود."
+                                    : "Configure height & weight thresholds and body shape bounds for active size choices to empower the sizing engine."}
+                                </span>
+                              </div>
+
+                              <div className="space-y-4">
+                                {sizes
+                                  .filter(sz => selectedSizeIds.includes(sz.id))
+                                  .map(sz => {
+                                    const cell = sizeGuidesFormState[sz.id] || {
+                                      enabled: false,
+                                      min_height: 150,
+                                      max_height: 180,
+                                      min_weight: 50,
+                                      max_weight: 80,
+                                      shapes: { slim: true, athletic: true, heavy: false }
+                                    };
+
+                                    return (
+                                      <div
+                                        key={sz.id}
+                                        className={`p-4 rounded-xl border transition-all ${
+                                          cell.enabled 
+                                            ? 'bg-sky-500/5 border-sky-500/20' 
+                                            : 'bg-neutral-900/10 border-neutral-800 opacity-60'
+                                        }`}
+                                      >
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                          {/* Identifier / Title */}
+                                          <div className="flex items-center gap-4 shrink-0 min-w-[150px]">
+                                            <div className="w-10 h-10 rounded-xl bg-sky-600/10 text-sky-400 font-extrabold text-xs flex items-center justify-center border border-sky-500/20">
+                                              {sz.name}
+                                            </div>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                              <input
+                                                type="checkbox"
+                                                checked={cell.enabled}
+                                                onChange={(e) => handleSizeGuideCellChange(sz.id, 'enabled', null, e.target.checked)}
+                                                className="rounded border-neutral-700 bg-neutral-900 text-sky-600 focus:ring-sky-500 w-4 h-4"
+                                              />
+                                              <span className="text-xs font-black text-neutral-300">
+                                                {cell.enabled ? (isRtl ? "راهنما فعال است" : "Active Guide") : (isRtl ? "فاقد بازه علمی" : "No rules")}
+                                              </span>
+                                            </label>
+                                          </div>
+
+                                          {cell.enabled ? (
+                                            <div className="flex-1 grid sm:grid-cols-3 gap-6">
+                                              {/* Height bounds */}
+                                              <div className="space-y-1.5">
+                                                <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "حدود قد مناسب (سانتی‌متر):" : "Height Range (cm):"}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                  <input
+                                                    type="number"
+                                                    value={cell.min_height}
+                                                    onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_height', null, Number(e.target.value))}
+                                                    className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                  />
+                                                  <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
+                                                  <input
+                                                    type="number"
+                                                    value={cell.max_height}
+                                                    onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_height', null, Number(e.target.value))}
+                                                    className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                  />
+                                                </div>
+                                              </div>
+
+                                              {/* Weight bounds */}
+                                              <div className="space-y-1.5">
+                                                <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "حدود وزن مناسب (کیلوگرم):" : "Weight Range (kg):"}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                  <input
+                                                    type="number"
+                                                    value={cell.min_weight}
+                                                    onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_weight', null, Number(e.target.value))}
+                                                    className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-indigo-400 font-extrabold"
+                                                  />
+                                                  <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
+                                                  <input
+                                                    type="number"
+                                                    value={cell.max_weight}
+                                                    onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_weight', null, Number(e.target.value))}
+                                                    className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-indigo-400 font-extrabold"
+                                                  />
+                                                </div>
+                                              </div>
+
+                                              {/* Body shapes */}
+                                              <div className="space-y-1.5">
+                                                <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "سازگاری با ساختار بدنی:" : "Compatible Body Shapes:"}</span>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                  {/* Slim */}
+                                                  <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
+                                                    cell.shapes.slim ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                                  }`}>
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={cell.shapes.slim}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'shapes', 'slim', e.target.checked)}
+                                                      className="hidden"
+                                                    />
+                                                    <span>{isRtl ? "لاغر" : "Slim"}</span>
+                                                  </label>
+
+                                                  {/* Athletic */}
+                                                  <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
+                                                    cell.shapes.athletic ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                                  }`}>
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={cell.shapes.athletic}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'shapes', 'athletic', e.target.checked)}
+                                                      className="hidden"
+                                                    />
+                                                    <span>{isRtl ? "ورزشکار" : "Athletic"}</span>
+                                                  </label>
+
+                                                  {/* Heavy */}
+                                                  <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
+                                                    cell.shapes.heavy ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                                  }`}>
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={cell.shapes.heavy}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'shapes', 'heavy', e.target.checked)}
+                                                      className="hidden"
+                                                    />
+                                                    <span>{isRtl ? "توپر" : "Heavy"}</span>
+                                                  </label>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <div className="flex-1 text-right text-[10px] text-neutral-500 font-semibold italic">
+                                              {isRtl ? "راهنمای ابعادی برای این سایز لباس تعریف نشده است." : "No sizing parameters specified for this size option."}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
 
                           <div className="flex justify-end pt-4 border-t border-neutral-800/40">
                             <button
@@ -1678,6 +1975,374 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                 </div>
               )}
 
+              {/* TAB 2.5: SIZE GUIDE TEMPLATES CRUD MANAGER */}
+              {activeTab === 'templates' && (
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-black">{isRtl ? "قالب‌های سایزبندی عمومی" : "Size Guide Templates"}</h3>
+                      <p className="text-xs text-neutral-400">
+                        {isRtl 
+                          ? "الگوها و جدول‌های اندازه‌گیری تکرارپذیر بسازید تا بدون نیاز به مقداردهی دستی کالاها، آنها را سریعاً به پوشاک تخصیص دهید." 
+                          : "Create reusable measurement charts and link them to any product instead of copy-pasting rules manually."}
+                      </p>
+                    </div>
+
+                    {!editingTemplate && (
+                      <button
+                        onClick={() => {
+                          setEditingTemplate({ id: 0, name: '', measurements: [] });
+                          setTemplateFormName('');
+                          const formState: Record<string, any> = {};
+                          sizes.forEach(sz => {
+                            formState[sz.id] = {
+                              enabled: false,
+                              min_height: 150,
+                              max_height: 180,
+                              min_weight: 50,
+                              max_weight: 80,
+                              shapes: { slim: true, athletic: true, heavy: false }
+                            };
+                          });
+                          setTemplateFormState(formState);
+                        }}
+                        className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-lg transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>{isRtl ? "ایجاد قالب جدید" : "Create New Template"}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {editingTemplate ? (
+                    <div className="p-6 bg-neutral-900/40 border border-neutral-800 rounded-2xl space-y-6">
+                      <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+                        <h4 className="text-sm font-extrabold text-sky-400 flex items-center gap-2">
+                          <Ruler className="w-4 h-4" />
+                          <span>
+                            {editingTemplate.id === 0 
+                              ? (isRtl ? "ایجاد قالب سایزبندی جدید" : "Create New Sizing Template")
+                              : (isRtl ? `ویرایش قالب: ${editingTemplate.name}` : `Edit Template: ${editingTemplate.name}`)}
+                          </span>
+                        </h4>
+                        <button
+                          onClick={() => setEditingTemplate(null)}
+                          className="p-1 text-neutral-400 hover:text-neutral-200"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-neutral-400 mb-1">{isRtl ? "نام قالب (مثلا: هودی لش قواره بزرگ)" : "Template Name (e.g., Oversized Heavy Hoodie):"}</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder={isRtl ? "نام توصیفی قالب" : "Descriptive template name"}
+                            value={templateFormName}
+                            onChange={(e) => setTemplateFormName(e.target.value)}
+                            className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+
+                        <div className="space-y-3 pt-3">
+                          <div className="text-xs font-bold text-neutral-400">{isRtl ? "تنظیم بازه‌های ابعادی سایزها:" : "Configure Size-by-Size Sizing Rules:"}</div>
+                          <div className="grid gap-3">
+                            {sizes.map(sz => {
+                              const cell = templateFormState[sz.id] || {
+                                enabled: false,
+                                min_height: 150,
+                                max_height: 180,
+                                min_weight: 50,
+                                max_weight: 80,
+                                shapes: { slim: true, athletic: true, heavy: false }
+                              };
+
+                              const handleTplCellChange = (field: string, subfield: string | null, value: any) => {
+                                setTemplateFormState(prev => {
+                                  const updated = { ...prev[sz.id] };
+                                  if (subfield) {
+                                    updated[field] = { ...updated[field], [subfield]: value };
+                                  } else {
+                                    updated[field] = value;
+                                  }
+                                  return { ...prev, [sz.id]: updated };
+                                });
+                              };
+
+                              return (
+                                <div
+                                  key={sz.id}
+                                  className={`p-4 rounded-xl border transition-all ${
+                                    cell.enabled 
+                                      ? 'bg-sky-500/5 border-sky-500/20' 
+                                      : 'bg-neutral-900/10 border-neutral-800 opacity-60'
+                                  }`}
+                                >
+                                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                    <div className="flex items-center gap-4 shrink-0 min-w-[150px]">
+                                      <div className="w-10 h-10 rounded-xl bg-sky-600/10 text-sky-400 font-extrabold text-xs flex items-center justify-center border border-sky-500/20">
+                                        {sz.name}
+                                      </div>
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={cell.enabled}
+                                          onChange={(e) => handleTplCellChange('enabled', null, e.target.checked)}
+                                          className="rounded border-neutral-700 bg-neutral-900 text-sky-600 focus:ring-sky-500 w-4 h-4"
+                                        />
+                                        <span className="text-xs font-black text-neutral-300">
+                                          {cell.enabled ? (isRtl ? "فعال در قالب" : "Active") : (isRtl ? "غیرفعال" : "Disabled")}
+                                        </span>
+                                      </label>
+                                    </div>
+
+                                    {cell.enabled ? (
+                                      <div className="flex-1 grid sm:grid-cols-3 gap-6">
+                                        {/* Height */}
+                                        <div className="space-y-1.5">
+                                          <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "قد مناسب (سانتی‌متر):" : "Height Range (cm):"}</span>
+                                          <div className="flex items-center gap-1.5">
+                                            <input
+                                              type="number"
+                                              value={cell.min_height}
+                                              onChange={(e) => handleTplCellChange('min_height', null, Number(e.target.value))}
+                                              className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                            />
+                                            <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
+                                            <input
+                                              type="number"
+                                              value={cell.max_height}
+                                              onChange={(e) => handleTplCellChange('max_height', null, Number(e.target.value))}
+                                              className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Weight */}
+                                        <div className="space-y-1.5">
+                                          <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "وزن مناسب (کیلوگرم):" : "Weight Range (kg):"}</span>
+                                          <div className="flex items-center gap-1.5">
+                                            <input
+                                              type="number"
+                                              value={cell.min_weight}
+                                              onChange={(e) => handleTplCellChange('min_weight', null, Number(e.target.value))}
+                                              className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-indigo-400 font-extrabold"
+                                            />
+                                            <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
+                                            <input
+                                              type="number"
+                                              value={cell.max_weight}
+                                              onChange={(e) => handleTplCellChange('max_weight', null, Number(e.target.value))}
+                                              className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-indigo-400 font-extrabold"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Shapes */}
+                                        <div className="space-y-1.5">
+                                          <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "ساختار بدنی خریدار:" : "Body Shapes:"}</span>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
+                                              cell.shapes.slim ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                            }`}>
+                                              <input
+                                                type="checkbox"
+                                                checked={cell.shapes.slim}
+                                                onChange={(e) => handleTplCellChange('shapes', 'slim', e.target.checked)}
+                                                className="hidden"
+                                              />
+                                              <span>{isRtl ? "لاغر" : "Slim"}</span>
+                                            </label>
+
+                                            <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
+                                              cell.shapes.athletic ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                            }`}>
+                                              <input
+                                                type="checkbox"
+                                                checked={cell.shapes.athletic}
+                                                onChange={(e) => handleTplCellChange('shapes', 'athletic', e.target.checked)}
+                                                className="hidden"
+                                              />
+                                              <span>{isRtl ? "ورزشکار" : "Athletic"}</span>
+                                            </label>
+
+                                            <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
+                                              cell.shapes.heavy ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                            }`}>
+                                              <input
+                                                type="checkbox"
+                                                checked={cell.shapes.heavy}
+                                                onChange={(e) => handleTplCellChange('shapes', 'heavy', e.target.checked)}
+                                                className="hidden"
+                                              />
+                                              <span>{isRtl ? "توپر" : "Heavy"}</span>
+                                            </label>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex-1 text-right text-[10px] text-neutral-500 italic">
+                                        {isRtl ? "سایز فاقد مقادیر اندازه‌گیری در این قالب" : "Size unmapped in this template profile"}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-4 border-t border-neutral-800">
+                        <button
+                          type="button"
+                          onClick={() => setEditingTemplate(null)}
+                          className="px-4 py-2 bg-neutral-850 hover:bg-neutral-800 rounded-xl text-xs font-black text-neutral-300"
+                        >
+                          {isRtl ? "انصراف" : "Cancel"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingTemplate}
+                          onClick={async () => {
+                            if (!templateFormName.trim()) {
+                              setError(isRtl ? "نام قالب الزامی است." : "Template name is required.");
+                              return;
+                            }
+                            setSavingTemplate(true);
+                            setError('');
+                            try {
+                              const list: SizeGuideTemplateItem[] = [];
+                              sizes.forEach(sz => {
+                                const val = templateFormState[sz.id];
+                                if (val && val.enabled) {
+                                  list.push({
+                                    size_id: sz.id,
+                                    min_height: Number(val.min_height),
+                                    max_height: Number(val.max_height),
+                                    min_weight: Number(val.min_weight),
+                                    max_weight: Number(val.max_weight),
+                                    shapes: val.shapes
+                                  });
+                                }
+                              });
+
+                              if (list.length === 0) {
+                                throw new Error(isRtl ? "لطفاً حداقل برای یک سایز، راهنمای ابعادی را در قالب تعریف کنید." : "At least one sizing rule must be configured.");
+                              }
+
+                              if (editingTemplate.id === 0) {
+                                await DirectusAPI.createSizeGuideTemplate(templateFormName, list);
+                                setSuccess(isRtl ? "قالب با موفقیت ایجاد شد." : "Template registered successfully.");
+                              } else {
+                                await DirectusAPI.updateSizeGuideTemplate(editingTemplate.id, templateFormName, list);
+                                setSuccess(isRtl ? "تغییرات قالب با موفقیت ذخیره شد." : "Template specs saved successfully.");
+                              }
+
+                              const res = await DirectusAPI.getSizeGuideTemplates();
+                              setTemplatesList(res);
+                              setEditingTemplate(null);
+                            } catch (err: any) {
+                              setError(err.message || (isRtl ? "خطا در پردازش قالب." : "Error processing template."));
+                            } finally {
+                              setSavingTemplate(false);
+                            }
+                          }}
+                          className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 rounded-xl text-xs font-black text-white flex items-center gap-2 shadow-lg"
+                        >
+                          {savingTemplate ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4" />
+                              <span>{isRtl ? "ذخیره نهایی قالب" : "Save Template Specs"}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {templatesList.length === 0 ? (
+                        <div className="col-span-full p-12 text-center bg-neutral-900/10 border border-neutral-800 rounded-2xl italic text-xs text-neutral-500 font-extrabold">
+                          {isRtl ? "هیچ قالب سایزبندی تعریف نشده است. برای تخصیص آسان به پوشاک، اولین قالب را همین حالا بسازید!" : "No reusable templates registered yet. Create one to assign specs in bulk!"}
+                        </div>
+                      ) : (
+                        templatesList.map(tpl => (
+                          <div key={tpl.id} className="p-5 bg-neutral-900/50 border border-neutral-800 rounded-2xl flex flex-col justify-between gap-4">
+                            <div>
+                              <div className="flex items-start justify-between">
+                                <h4 className="text-xs font-black text-neutral-200">{tpl.name}</h4>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setEditingTemplate(tpl);
+                                      setTemplateFormName(tpl.name);
+                                      const formState: Record<string, any> = {};
+                                      sizes.forEach(sz => {
+                                        const found = tpl.measurements?.find(m => m.size_id === sz.id);
+                                        formState[sz.id] = {
+                                          enabled: !!found,
+                                          min_height: found ? found.min_height : 150,
+                                          max_height: found ? found.max_height : 180,
+                                          min_weight: found ? found.min_weight : 50,
+                                          max_weight: found ? found.max_weight : 80,
+                                          shapes: found ? found.shapes : { slim: true, athletic: true, heavy: false }
+                                        };
+                                      });
+                                      setTemplateFormState(formState);
+                                    }}
+                                    className="p-1.5 bg-neutral-800/60 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-sky-400 transition-all"
+                                    title={isRtl ? "ویرایش قالب" : "Edit template"}
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm(isRtl ? `آیا از حذف قالب "${tpl.name}" اطمینان دارید؟ کالاها به تنظیمات اندازه اختصاصی تغییر وضعیت خواهند داد.` : `Delete template "${tpl.name}"? linked products will fall back to direct specs.`)) {
+                                        try {
+                                          await DirectusAPI.deleteSizeGuideTemplate(tpl.id);
+                                          const list = await DirectusAPI.getSizeGuideTemplates();
+                                          setTemplatesList(list);
+                                          setSuccess(isRtl ? "قالب سایزبندی حذف شد." : "Template deleted successfully.");
+                                        } catch (err) {
+                                          setError(isRtl ? "خطا در حذف قالب." : "Error removing template.");
+                                        }
+                                      }
+                                    }}
+                                    className="p-1.5 bg-neutral-800/60 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-red-400 transition-all"
+                                    title={isRtl ? "حذف قالب" : "Delete template"}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 space-y-2">
+                                <div className="text-[10px] font-bold text-neutral-500">{isRtl ? "قوانین فعال سایزها:" : "Active Size Rules:"}</div>
+                                <div className="grid gap-1">
+                                  {tpl.measurements?.map((m, idx) => {
+                                    const szName = sizes.find(s => s.id === m.size_id)?.name || `ID: ${m.size_id}`;
+                                    return (
+                                      <div key={idx} className="flex items-center justify-between text-[10px] px-2 py-1 bg-neutral-950 rounded border border-neutral-800/40">
+                                        <span className="font-extrabold text-sky-400">{szName}</span>
+                                        <span className="text-neutral-400 font-semibold">{m.min_height}-{m.max_height}cm | {m.min_weight}-{m.max_weight}kg</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* TAB 3: CLIENT-SIDE IMAGE COMPRESSOR */}
               {activeTab === 'compressor' && (
                 <div className={`p-6 rounded-2xl border space-y-6 ${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}>
@@ -1780,7 +2445,155 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                 </div>
               )}
 
-              {/* TAB 4: STORE SETTINGS */}
+              {/* TAB 2.8: DEDICATED SIZES MANAGEMENT MENU */}
+              {activeTab === 'sizes' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-black">{isRtl ? "مدیریت سایزهای فروشگاه" : "Size Catalog Management"}</h3>
+                    <p className="text-xs text-neutral-400">
+                      {isRtl 
+                        ? "سایزهای دلخواه خود (مانند فری‌سایز، ۳۸، ۴۰ و...) را تعریف کنید تا بلافاصله به عنوان ستون در جدول انبار و سبد خرید فعال شوند." 
+                        : "Define custom sizes (e.g. Free Size, 38, 40) to instantly render as options in your catalog, variant matrices, and storefront."}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-6 lg:grid-cols-12">
+                    {/* Size Creator Form Panel */}
+                    <div className="lg:col-span-4 bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl">
+                      <h4 className="text-sm font-extrabold text-sky-400 flex items-center gap-2 mb-4">
+                        <Plus className="w-4 h-4" />
+                        <span>{isRtl ? "افزودن سایز سفارشی" : "Add Custom Size"}</span>
+                      </h4>
+
+                      <form onSubmit={handleCreateSize} className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                            {isRtl ? "عنوان سایز (مثال: Free Size یا ۳۸):" : "Size Name (e.g. Free Size or 38):"}
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder={isRtl ? "مثال: ۴۲" : "e.g. 42"}
+                            value={newSizeName}
+                            onChange={(e) => setNewSizeName(e.target.value)}
+                            className="w-full px-3 py-2 bg-neutral-950/80 border border-white/10 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                            {isRtl ? "ترتیب نمایش (عدد کوچک‌تر اول نمایش داده می‌شود):" : "Display Sort Order (lower numbers show first):"}
+                          </label>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            value={newSizeSortOrder}
+                            onChange={(e) => setNewSizeSortOrder(Number(e.target.value))}
+                            className="w-full px-3 py-2 bg-neutral-950/80 border border-white/10 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono text-center"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={creatingSize}
+                          className="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg hover:shadow-sky-500/20 transition-all cursor-pointer"
+                        >
+                          {creatingSize ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4" />
+                              <span>{isRtl ? "ثبت و افزودن سایز" : "Register Size"}</span>
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* Sizes Listing Panel */}
+                    <div className="lg:col-span-8 bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl space-y-6">
+                      {/* Merchant Custom Sizes Section */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                          <h4 className="text-xs font-black text-sky-400">
+                            {isRtl ? "سایزهای سفارشی شما" : "Merchant Custom Sizes"}
+                          </h4>
+                          <span className="text-[10px] bg-sky-500/10 text-sky-400 font-extrabold px-2 py-0.5 rounded-full">
+                            {sizes.filter(s => s.user_created === currentUser?.id).length} {isRtl ? "مورد" : "items"}
+                          </span>
+                        </div>
+
+                        <div className="grid gap-2.5 sm:grid-cols-2">
+                          {sizes.filter(s => s.user_created === currentUser?.id).length === 0 ? (
+                            <div className="col-span-full py-8 text-center bg-neutral-950/20 border border-white/5 rounded-xl italic text-xs text-neutral-500">
+                              {isRtl ? "هیچ سایز سفارشی هنوز اضافه نکرده‌اید." : "No custom merchant sizes defined yet."}
+                            </div>
+                          ) : (
+                            sizes
+                              .filter(s => s.user_created === currentUser?.id)
+                              .map(sz => (
+                                <div 
+                                  key={sz.id} 
+                                  className="flex items-center justify-between p-3 bg-neutral-950/40 border border-white/5 hover:border-sky-500/30 rounded-xl transition-all group"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center font-extrabold text-xs">
+                                      {sz.name}
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-bold text-neutral-200">{sz.name}</p>
+                                      <p className="text-[9px] text-neutral-500 font-mono">ID: {sz.id} | {isRtl ? "ترتیب:" : "Sort:"} {sz.sort_order}</p>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    onClick={() => handleDeleteSize(sz.id, sz.name)}
+                                    className="p-1.5 bg-neutral-900/80 hover:bg-red-500/10 text-neutral-500 hover:text-red-400 rounded-lg border border-white/5 opacity-80 hover:opacity-100 transition-all cursor-pointer"
+                                    title={isRtl ? "حذف سایز" : "Delete size"}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* System Default Sizes Section */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                          <h4 className="text-xs font-black text-neutral-400">
+                            {isRtl ? "سایزهای پیش‌فرض و سیستمی (غیرقابل ویرایش)" : "System Default Sizes (Read-Only)"}
+                          </h4>
+                          <span className="text-[10px] bg-neutral-500/10 text-neutral-400 font-extrabold px-2 py-0.5 rounded-full">
+                            {sizes.filter(s => !s.user_created).length} {isRtl ? "مورد" : "items"}
+                          </span>
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          {sizes
+                            .filter(s => !s.user_created)
+                            .map(sz => (
+                              <div 
+                                key={sz.id} 
+                                className="flex items-center gap-3 p-2.5 bg-neutral-950/10 border border-white/5 rounded-xl opacity-60"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-neutral-800 text-neutral-400 flex items-center justify-center font-extrabold text-[11px] border border-white/5">
+                                  {sz.name}
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-extrabold text-neutral-300">{sz.name}</p>
+                                  <p className="text-[8px] text-neutral-500 font-mono">{isRtl ? "ترتیب:" : "Sort:"} {sz.sort_order}</p>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {activeTab === 'settings' && (
                 <div className={`p-6 rounded-2xl border max-w-2xl mx-auto space-y-6 ${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                   <div>

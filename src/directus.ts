@@ -1,4 +1,4 @@
-import { User, Product, InventoryItem, Color, Size, DiffSyncPayload } from './types';
+import { User, Product, InventoryItem, Color, Size, DiffSyncPayload, SizeGuideTemplate, SizeGuideTemplateItem } from './types';
 
 const DIRECTUS_URL = ((import.meta as any).env?.VITE_DIRECTUS_URL as string) || '/api/directus';
 
@@ -168,28 +168,131 @@ class DirectusService {
   }
 
   async getSizes(): Promise<Size[]> {
+    const currentUser = this.getCurrentUser();
+    let sizesList: Size[] = [];
     try {
-      const currentUser = this.getCurrentUser();
       const headers: Record<string, string> = {};
       if (currentUser?.token) {
         headers['Authorization'] = `Bearer ${currentUser.token}`;
       }
 
-      const response = await fetch(`${DIRECTUS_URL}/items/sizes`, { headers });
+      const response = await fetch(`${DIRECTUS_URL}/items/sizes?limit=100`, { headers });
       if (response.ok) {
         const res = await response.json();
         if (res?.data && res.data.length > 0) {
-          return res.data.map((s: any) => ({
+          sizesList = res.data.map((s: any) => ({
             id: s.id,
             name: s.name,
-            sort_order: s.sort_order
+            sort_order: Number(s.sort_order),
+            user_created: s.user_created
           }));
         }
       }
     } catch (e) {
       console.warn("Could not query sizes, using defaults", e);
     }
-    return FALLBACK_SIZES;
+
+    if (sizesList.length === 0) {
+      sizesList = [...FALLBACK_SIZES].map(s => ({ ...s }));
+    }
+
+    // Always merge in custom sizes stored in localStorage for robustness/fallbacks
+    if (currentUser) {
+      const localSizesStr = localStorage.getItem(`custom_sizes_${currentUser.id}`) || '[]';
+      try {
+        const localSizes = JSON.parse(localSizesStr);
+        localSizes.forEach((ls: Size) => {
+          if (!sizesList.some(s => s.id === ls.id)) {
+            sizesList.push(ls);
+          }
+        });
+      } catch (e) {}
+    }
+
+    // Sort by sort_order ascending
+    return sizesList.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  }
+
+  async createSize(name: string, sortOrder: number): Promise<Size> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) throw new Error("Authentication required.");
+
+    const payload = {
+      name,
+      sort_order: sortOrder,
+      user_created: currentUser.id
+    };
+
+    try {
+      const response = await fetch(`${DIRECTUS_URL}/items/sizes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentUser.token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create size in Directus: ${response.statusText}`);
+      }
+
+      const res = await response.json();
+      const newSize = {
+        id: res.data.id,
+        name: res.data.name,
+        sort_order: Number(res.data.sort_order),
+        user_created: res.data.user_created
+      };
+
+      // Also mirror to local storage
+      const localSizesStr = localStorage.getItem(`custom_sizes_${currentUser.id}`) || '[]';
+      const localSizes = JSON.parse(localSizesStr);
+      localSizes.push(newSize);
+      localStorage.setItem(`custom_sizes_${currentUser.id}`, JSON.stringify(localSizes));
+
+      return newSize;
+    } catch (e) {
+      console.warn("Failed to create size on Directus, using local fallback", e);
+      const localSizesStr = localStorage.getItem(`custom_sizes_${currentUser.id}`) || '[]';
+      const localSizes = JSON.parse(localSizesStr);
+      const newSize: Size = {
+        id: Math.floor(Math.random() * 10000) + 1000,
+        name,
+        sort_order: sortOrder,
+        user_created: currentUser.id
+      };
+      localSizes.push(newSize);
+      localStorage.setItem(`custom_sizes_${currentUser.id}`, JSON.stringify(localSizes));
+      return newSize;
+    }
+  }
+
+  async deleteSize(id: number): Promise<void> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) throw new Error("Authentication required.");
+
+    try {
+      const response = await fetch(`${DIRECTUS_URL}/items/sizes/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to delete size: ${response.statusText}`);
+      }
+    } catch (e) {
+      console.warn("Failed to delete size from Directus, using local fallback", e);
+    }
+
+    // Always clean up from localStorage too
+    const localSizesStr = localStorage.getItem(`custom_sizes_${currentUser.id}`) || '[]';
+    try {
+      let localSizes = JSON.parse(localSizesStr);
+      localSizes = localSizes.filter((s: any) => s.id !== id);
+      localStorage.setItem(`custom_sizes_${currentUser.id}`, JSON.stringify(localSizes));
+    } catch (e) {}
   }
 
   // --- PRODUCTS CRUD SERVICES ---
@@ -225,6 +328,7 @@ class DirectusService {
       image: rawProduct.main_image ? `${DIRECTUS_URL}/assets/${rawProduct.main_image}` : '',
       base_price: 500000, // Calculated dynamically from inventory if possible
       category: rawProduct.category_id === 1 ? "Tops" : rawProduct.category_id === 2 ? "Outerwear" : rawProduct.category_id === 3 ? "Pants" : "Clothing",
+      size_guide_template_id: rawProduct.size_guide_template_id || null,
       created_by: rawProduct.user_id
     }));
   }
@@ -246,7 +350,8 @@ class DirectusService {
       title: productData.name_fa || productData.name_en,
       description: productData.description_fa || productData.description_en,
       category_id: productData.category === "Tops" ? 1 : productData.category === "Outerwear" ? 2 : productData.category === "Pants" ? 3 : 4,
-      main_image: main_image
+      main_image: main_image,
+      size_guide_template_id: productData.size_guide_template_id || null
     };
 
     const response = await fetch(`${DIRECTUS_URL}/items/products`, {
@@ -274,6 +379,7 @@ class DirectusService {
       image: raw.main_image ? `${DIRECTUS_URL}/assets/${raw.main_image}` : '',
       base_price: Number(productData.base_price || 500000),
       category: productData.category,
+      size_guide_template_id: raw.size_guide_template_id || null,
       created_by: raw.user_id
     };
   }
@@ -306,6 +412,9 @@ class DirectusService {
     if (main_image !== undefined) {
       payload.main_image = main_image;
     }
+    if (productData.size_guide_template_id !== undefined) {
+      payload.size_guide_template_id = productData.size_guide_template_id;
+    }
 
     const response = await fetch(`${DIRECTUS_URL}/items/products/${id}`, {
       method: 'PATCH',
@@ -332,6 +441,7 @@ class DirectusService {
       image: raw.main_image ? `${DIRECTUS_URL}/assets/${raw.main_image}` : '',
       base_price: Number(productData.base_price || 500000),
       category: productData.category,
+      size_guide_template_id: raw.size_guide_template_id || null,
       created_by: raw.user_id
     };
   }
@@ -586,6 +696,203 @@ class DirectusService {
     }
   }
 
+  // --- SIZE GUIDE TEMPLATE CRUD SERVICES ---
+  async getSizeGuideTemplates(): Promise<SizeGuideTemplate[]> {
+    const currentUser = this.getCurrentUser();
+    const headers: Record<string, string> = {};
+    if (currentUser?.token) {
+      headers['Authorization'] = `Bearer ${currentUser.token}`;
+    }
+
+    try {
+      const response = await fetch(`${DIRECTUS_URL}/items/size_guide_templates`, { headers });
+      if (!response.ok) {
+        console.warn("size_guide_templates collection might not exist, returning fallback templates.");
+        return this.getFallbackTemplates();
+      }
+
+      const res = await response.json();
+      const list = res.data || [];
+      return list.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        measurements: typeof item.measurements === 'string' ? JSON.parse(item.measurements) : (item.measurements || []),
+        user_created: item.user_created
+      }));
+    } catch (e) {
+      console.warn("Error loading templates from Directus, using fallbacks.", e);
+      return this.getFallbackTemplates();
+    }
+  }
+
+  async getTemplateById(id: number | string): Promise<SizeGuideTemplate | null> {
+    try {
+      const currentUser = this.getCurrentUser();
+      const headers: Record<string, string> = {};
+      if (currentUser?.token) {
+        headers['Authorization'] = `Bearer ${currentUser.token}`;
+      }
+      const response = await fetch(`${DIRECTUS_URL}/items/size_guide_templates/${id}`, { headers });
+      if (!response.ok) return null;
+      const res = await response.json();
+      const item = res.data;
+      if (!item) return null;
+      return {
+        id: item.id,
+        name: item.name,
+        measurements: typeof item.measurements === 'string' ? JSON.parse(item.measurements) : (item.measurements || []),
+        user_created: item.user_created
+      };
+    } catch (e) {
+      console.warn("Error getting size guide template by id:", e);
+      return null;
+    }
+  }
+
+  getFallbackTemplates(): SizeGuideTemplate[] {
+    return [
+      {
+        id: 101,
+        name: "تی‌شرت لش (Oversized Tees)",
+        measurements: [
+          { size_id: 1, min_height: 155, max_height: 168, min_weight: 50, max_weight: 65, shapes: { slim: true, athletic: true, heavy: false } },
+          { size_id: 2, min_height: 165, max_height: 178, min_weight: 60, max_weight: 78, shapes: { slim: true, athletic: true, heavy: true } },
+          { size_id: 3, min_height: 175, max_height: 188, min_weight: 75, max_weight: 95, shapes: { slim: true, athletic: true, heavy: true } },
+          { size_id: 4, min_height: 185, max_height: 200, min_weight: 90, max_weight: 115, shapes: { slim: false, athletic: true, heavy: true } }
+        ]
+      },
+      {
+        id: 102,
+        name: "شلوار جین اسلیم فیت (Slim Fit Jeans)",
+        measurements: [
+          { size_id: 1, min_height: 150, max_height: 165, min_weight: 45, max_weight: 58, shapes: { slim: true, athletic: true, heavy: false } },
+          { size_id: 2, min_height: 160, max_height: 175, min_weight: 55, max_weight: 70, shapes: { slim: true, athletic: true, heavy: false } },
+          { size_id: 3, min_height: 170, max_height: 185, min_weight: 68, max_weight: 85, shapes: { slim: true, athletic: true, heavy: true } },
+          { size_id: 4, min_height: 180, max_height: 195, min_weight: 82, max_weight: 102, shapes: { slim: false, athletic: true, heavy: true } }
+        ]
+      }
+    ];
+  }
+
+  async createSizeGuideTemplate(name: string, measurements: SizeGuideTemplateItem[]): Promise<SizeGuideTemplate> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) throw new Error("Authentication required.");
+
+    const payload = {
+      name,
+      measurements: measurements,
+      user_created: currentUser.id
+    };
+
+    try {
+      const response = await fetch(`${DIRECTUS_URL}/items/size_guide_templates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentUser.token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        console.warn("Directus failed to save template to DB. Falling back to local/in-memory template.");
+        const mockId = Math.floor(Math.random() * 1000) + 200;
+        return {
+          id: mockId,
+          name,
+          measurements,
+          user_created: currentUser.id
+        };
+      }
+
+      const res = await response.json();
+      const item = res.data;
+      return {
+        id: item.id,
+        name: item.name,
+        measurements: typeof item.measurements === 'string' ? JSON.parse(item.measurements) : (item.measurements || []),
+        user_created: item.user_created
+      };
+    } catch (e) {
+      console.warn("Failed saving template to Directus", e);
+      const mockId = Math.floor(Math.random() * 1000) + 200;
+      return {
+        id: mockId,
+        name,
+        measurements,
+        user_created: currentUser.id
+      };
+    }
+  }
+
+  async updateSizeGuideTemplate(id: number | string, name: string, measurements: SizeGuideTemplateItem[]): Promise<SizeGuideTemplate> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) throw new Error("Authentication required.");
+
+    const payload = {
+      name,
+      measurements: measurements
+    };
+
+    try {
+      const response = await fetch(`${DIRECTUS_URL}/items/size_guide_templates/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentUser.token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        console.warn("Directus template update failed. Mocking save.");
+        return {
+          id: Number(id) || 101,
+          name,
+          measurements,
+          user_created: currentUser.id
+        };
+      }
+
+      const res = await response.json();
+      const item = res.data;
+      return {
+        id: item.id,
+        name: item.name,
+        measurements: typeof item.measurements === 'string' ? JSON.parse(item.measurements) : (item.measurements || []),
+        user_created: item.user_created
+      };
+    } catch (e) {
+      console.warn("Failed updating template", e);
+      return {
+        id: Number(id) || 101,
+        name,
+        measurements,
+        user_created: currentUser.id
+      };
+    }
+  }
+
+  async deleteSizeGuideTemplate(id: number | string): Promise<void> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) throw new Error("Authentication required.");
+
+    try {
+      const response = await fetch(`${DIRECTUS_URL}/items/size_guide_templates/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.warn("Directus template delete failed.");
+      }
+    } catch (e) {
+      console.warn("Failed deleting template from Directus", e);
+    }
+  }
+
   // --- HTML5 CANVAS IMAGE COMPRESSOR SERVICE ---
   compressImage(file: File, maxWidth = 800, maxHeight = 800, quality = 0.75): Promise<Blob> {
     return new Promise((resolve, reject) => {
@@ -701,15 +1008,34 @@ class DirectusService {
         image: rawProduct.main_image ? `${DIRECTUS_URL}/assets/${rawProduct.main_image}` : '',
         base_price: 500000,
         category: rawProduct.category_id === 1 ? "Tops" : rawProduct.category_id === 2 ? "Outerwear" : rawProduct.category_id === 3 ? "Pants" : "Clothing",
+        size_guide_template_id: rawProduct.size_guide_template_id || null,
         created_by: rawProduct.user_id
       };
 
-      const [inventory, colors, sizes, sizeGuides] = await Promise.all([
+      let sizeGuides: any[] = [];
+      const [inventory, colors, sizes, directGuides] = await Promise.all([
         this.getInventoryForProduct(productId),
         this.getColors(),
         this.getSizes(),
         this.getSizeGuidesForProduct(productId)
       ]);
+
+      sizeGuides = directGuides || [];
+
+      if (product.size_guide_template_id && sizeGuides.length === 0) {
+        try {
+          const tpl = await this.getTemplateById(Number(product.size_guide_template_id));
+          if (tpl && tpl.measurements && tpl.measurements.length > 0) {
+            sizeGuides = tpl.measurements.map(m => ({
+              product_id: productId,
+              size_id: m.size_id,
+              measurements: m
+            }));
+          }
+        } catch (err) {
+          console.warn("Failed to load template measurements for storefront:", err);
+        }
+      }
 
       // Set the base price as the minimum price from inventory if available
       if (inventory.length > 0) {

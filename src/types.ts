@@ -17,6 +17,7 @@ export interface Size {
   id: number;
   name: string;
   sort_order: number;
+  user_created?: string | null;
 }
 
 export interface SizeGuideSchema {
@@ -44,8 +45,29 @@ export interface Product {
   image?: string; // Directus file ID or absolute URL
   base_price: number;
   size_guides?: SizeGuideSchema; // JSON schema parsed in Size Advisor
+  size_guide_template_id?: number | string | null; // ID of the template
   category?: string;
   created_by?: string;
+}
+
+export interface SizeGuideTemplateItem {
+  size_id: number;
+  min_height: number;
+  max_height: number;
+  min_weight: number;
+  max_weight: number;
+  shapes: {
+    slim: boolean;
+    athletic: boolean;
+    heavy: boolean;
+  };
+}
+
+export interface SizeGuideTemplate {
+  id: number;
+  name: string;
+  measurements: SizeGuideTemplateItem[]; // Array of size rules
+  user_created?: string;
 }
 
 export interface InventoryItem {
