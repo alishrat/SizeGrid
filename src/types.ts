@@ -56,8 +56,21 @@ export interface SizeGuideTemplateItem {
   max_height: number;
   min_weight: number;
   max_weight: number;
+  min_chest?: number;
+  max_chest?: number;
+  min_waist?: number;
+  max_waist?: number;
+  min_hip?: number;
+  max_hip?: number;
+  min_shoulder?: number;
+  max_shoulder?: number;
+  min_sleeve?: number;
+  max_sleeve?: number;
+  min_length?: number;
+  max_length?: number;
   shapes: {
     slim: boolean;
+    regular?: boolean;
     athletic: boolean;
     heavy: boolean;
   };

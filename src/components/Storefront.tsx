@@ -59,6 +59,10 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
   const [advHip, setAdvHip] = useState<number>(98);
   const [advShoulder, setAdvShoulder] = useState<number>(42);
   const [calculatedRec, setCalculatedRec] = useState<string>('');
+  const [calculatedRecTops, setCalculatedRecTops] = useState<string>('');
+  const [calculatedRecBottoms, setCalculatedRecBottoms] = useState<string>('');
+  const [fitHintTops, setFitHintTops] = useState<string>('');
+  const [fitHintBottoms, setFitHintBottoms] = useState<string>('');
   const [advisorMessage, setAdvisorMessage] = useState<string>('');
   const [advisorIsAvailable, setAdvisorIsAvailable] = useState<boolean>(false);
 
@@ -152,156 +156,269 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
     }
   }, [selectedColor, selectedSize, inventory]);
 
+  // --- Helper to detect category ---
+  const isBottomProduct = (prod: any) => {
+    if (!prod) return false;
+    const cat = (prod.category || '').toLowerCase();
+    const nameEn = (prod.name_en || '').toLowerCase();
+    const nameFa = (prod.name_fa || '').toLowerCase();
+    return (
+      cat.includes('pant') ||
+      cat.includes('bottom') ||
+      cat.includes('jean') ||
+      cat.includes('شلوار') ||
+      cat.includes('پایین تنه') ||
+      nameEn.includes('pant') ||
+      nameEn.includes('trouser') ||
+      nameEn.includes('jean') ||
+      nameEn.includes('short') ||
+      nameFa.includes('شلوار') ||
+      nameFa.includes('کاپری') ||
+      nameFa.includes('دامن')
+    );
+  };
+
   // --- CLIENT SIZE ADVISOR CALCULATOR ---
   const runSizeAdvisorCalculations = () => {
     if (!product) return;
     setCalculatedRec('');
+    setCalculatedRecTops('');
+    setCalculatedRecBottoms('');
+    setFitHintTops('');
+    setFitHintBottoms('');
     setAdvisorMessage('');
     setAdvisorIsAvailable(false);
 
-    let theorizedSize = '';
-
-    // Step A: Find matching size guide from template rules
-    let bestMatchSizeId: number | null = null;
-    for (const guide of sizeGuides) {
-      const rawMeas = typeof guide.measurements === 'string'
-        ? JSON.parse(guide.measurements)
-        : guide.measurements;
-
-      const minH = Number(rawMeas?.min_height ?? 150);
-      const maxH = Number(rawMeas?.max_height ?? 180);
-      const minW = Number(rawMeas?.min_weight ?? 50);
-      const maxW = Number(rawMeas?.max_weight ?? 80);
-      const compatibleShapes = rawMeas?.shapes || { slim: true, regular: true, athletic: true, heavy: false };
-
-      if (
-        advHeight >= minH &&
-        advHeight <= maxH &&
-        advWeight >= minW &&
-        advWeight <= maxW &&
-        (compatibleShapes[advShape] === true || compatibleShapes[advShape] === undefined)
-      ) {
-        bestMatchSizeId = guide.size_id;
-        break;
-      }
-    }
-
-    if (bestMatchSizeId) {
-      const sizeObj = sizes.find(s => s.id === bestMatchSizeId);
-      if (sizeObj) {
-        theorizedSize = sizeObj.name;
-      }
-    }
-
-    // Nominal Dimensions Reference
-    const getNominalDimensions = (sizeName: string) => {
+    // Helpers to retrieve specifications for any size (either custom from sizeGuides or standard nominals)
+    const getTopsSpecs = (sizeName: string) => {
       const name = sizeName.toUpperCase().trim();
+      // Try to find if there is an active custom sizeGuide defined by the merchant
+      const guide = sizeGuides.find(g => {
+        const sObj = sizes.find(s => s.id === g.size_id);
+        return sObj?.name.toUpperCase().trim() === name;
+      });
+
+      if (guide) {
+        const rawMeas = typeof guide.measurements === 'string' ? JSON.parse(guide.measurements) : guide.measurements;
+        if (rawMeas && rawMeas.enabled) {
+          return {
+            min_chest: Number(rawMeas.min_chest || 80),
+            max_chest: Number(rawMeas.max_chest || 130),
+            min_shoulder: Number(rawMeas.min_shoulder || 35),
+            max_shoulder: Number(rawMeas.max_shoulder || 55),
+            min_height: Number(rawMeas.min_height || 140),
+            max_height: Number(rawMeas.max_height || 210),
+            shapes: rawMeas.shapes || { slim: true, regular: true, athletic: true, heavy: true }
+          };
+        }
+      }
+
+      // Default high-quality fallback nominals
       if (name.includes('XS') || name === '36' || name === '۳۶') {
-        return { chest: 85, waist: 72, hip: 88, shoulder: 39 };
+        return { min_chest: 80, max_chest: 87, min_shoulder: 36, max_shoulder: 39, min_height: 150, max_height: 165, shapes: { slim: true, regular: true, athletic: false, heavy: false } };
       }
       if (name.includes('XXXL') || name === '46' || name === '۴۶') {
-        return { chest: 115, waist: 104, hip: 118, shoulder: 49 };
+        return { min_chest: 116, max_chest: 125, min_shoulder: 48, max_shoulder: 51, min_height: 185, max_height: 205, shapes: { slim: false, regular: true, athletic: true, heavy: true } };
       }
       if (name.includes('XXL') || name === '44' || name === '۴۴') {
-        return { chest: 110, waist: 98, hip: 112, shoulder: 47 };
+        return { min_chest: 110, max_chest: 116, min_shoulder: 46, max_shoulder: 48, min_height: 180, max_height: 195, shapes: { slim: false, regular: true, athletic: true, heavy: true } };
       }
       if (name.includes('XL') || name === '42' || name === '۴۲') {
-        return { chest: 105, waist: 92, hip: 106, shoulder: 45 };
+        return { min_chest: 104, max_chest: 110, min_shoulder: 44, max_shoulder: 46, min_height: 175, max_height: 190, shapes: { slim: true, regular: true, athletic: true, heavy: true } };
       }
       if (name.includes('L') || name === '40' || name === '۴۰') {
-        return { chest: 100, waist: 86, hip: 101, shoulder: 43 };
+        return { min_chest: 98, max_chest: 104, min_shoulder: 42, max_shoulder: 44, min_height: 170, max_height: 185, shapes: { slim: true, regular: true, athletic: true, heavy: true } };
       }
       if (name.includes('M') || name === '38' || name === '۳۸') {
-        return { chest: 94, waist: 80, hip: 96, shoulder: 41 };
+        return { min_chest: 92, max_chest: 98, min_shoulder: 40, max_shoulder: 42, min_height: 165, max_height: 178, shapes: { slim: true, regular: true, athletic: true, heavy: false } };
       }
       if (name.includes('S') || name === '37' || name === '۳۷') {
-        return { chest: 89, waist: 75, hip: 91, shoulder: 40 };
+        return { min_chest: 86, max_chest: 92, min_shoulder: 38, max_shoulder: 40, min_height: 155, max_height: 172, shapes: { slim: true, regular: true, athletic: true, heavy: false } };
       }
-      return { chest: 95, waist: 82, hip: 97, shoulder: 42 };
+      return { min_chest: 92, max_chest: 98, min_shoulder: 40, max_shoulder: 42, min_height: 165, max_height: 178, shapes: { slim: true, regular: true, athletic: true, heavy: true } };
     };
 
-    // Step B: Multi-criteria nearest-fit matching for Precision Mode
-    let bestPrecisionSize = '';
-    let minDiffScore = 999999;
+    const getBottomsSpecs = (sizeName: string) => {
+      const name = sizeName.toUpperCase().trim();
+      const guide = sizeGuides.find(g => {
+        const sObj = sizes.find(s => s.id === g.size_id);
+        return sObj?.name.toUpperCase().trim() === name;
+      });
+
+      if (guide) {
+        const rawMeas = typeof guide.measurements === 'string' ? JSON.parse(guide.measurements) : guide.measurements;
+        if (rawMeas && rawMeas.enabled) {
+          return {
+            min_waist: Number(rawMeas.min_waist || 60),
+            max_waist: Number(rawMeas.max_waist || 120),
+            min_hip: Number(rawMeas.min_hip || 80),
+            max_hip: Number(rawMeas.max_hip || 135),
+            min_height: Number(rawMeas.min_height || 140),
+            max_height: Number(rawMeas.max_height || 210),
+            shapes: rawMeas.shapes || { slim: true, regular: true, athletic: true, heavy: true }
+          };
+        }
+      }
+
+      // Default high-quality fallback nominals
+      if (name.includes('XS') || name === '36' || name === '۳۶') {
+        return { min_waist: 60, max_waist: 68, min_hip: 84, max_hip: 90, min_height: 150, max_height: 165, shapes: { slim: true, regular: true, athletic: false, heavy: false } };
+      }
+      if (name.includes('XXXL') || name === '46' || name === '۴۶') {
+        return { min_waist: 106, max_waist: 116, min_hip: 120, max_hip: 130, min_height: 185, max_height: 205, shapes: { slim: false, regular: true, athletic: true, heavy: true } };
+      }
+      if (name.includes('XXL') || name === '44' || name === '۴۴') {
+        return { min_waist: 98, max_waist: 106, min_hip: 114, max_hip: 120, min_height: 180, max_height: 195, shapes: { slim: false, regular: true, athletic: true, heavy: true } };
+      }
+      if (name.includes('XL') || name === '42' || name === '۴۲') {
+        return { min_waist: 90, max_waist: 98, min_hip: 108, max_hip: 114, min_height: 175, max_height: 190, shapes: { slim: true, regular: true, athletic: true, heavy: true } };
+      }
+      if (name.includes('L') || name === '40' || name === '۴۰') {
+        return { min_waist: 82, max_waist: 90, min_hip: 102, max_hip: 108, min_height: 170, max_height: 185, shapes: { slim: true, regular: true, athletic: true, heavy: true } };
+      }
+      if (name.includes('M') || name === '38' || name === '۳۸') {
+        return { min_waist: 74, max_waist: 82, min_hip: 96, max_hip: 102, min_height: 165, max_height: 178, shapes: { slim: true, regular: true, athletic: true, heavy: false } };
+      }
+      if (name.includes('S') || name === '37' || name === '۳۷') {
+        return { min_waist: 66, max_waist: 74, min_hip: 90, max_hip: 96, min_height: 155, max_height: 172, shapes: { slim: true, regular: true, athletic: true, heavy: false } };
+      }
+      return { min_waist: 74, max_waist: 82, min_hip: 96, max_hip: 102, min_height: 165, max_height: 178, shapes: { slim: true, regular: true, athletic: true, heavy: true } };
+    };
+
+    // Calculate best Tops Size
+    let bestTopsSize = '';
+    let minTopsPenalty = 999999;
     
-    for (const sz of sizes) {
-      const nominal = getNominalDimensions(sz.name);
-      const cDiff = advChest - nominal.chest;
-      const wDiff = advWaist - nominal.waist;
-      const hDiff = advHip - nominal.hip;
-      const sDiff = advShoulder - nominal.shoulder;
-      
-      const tightPenalty = (cDiff >= -2 ? 0 : Math.abs(cDiff) * 3) + 
-                            (wDiff >= -3 ? 0 : Math.abs(wDiff) * 2) + 
-                            (hDiff >= -2 ? 0 : Math.abs(hDiff) * 2) +
-                            (sDiff >= -1 ? 0 : Math.abs(sDiff) * 4);
-      
-      const loosePenalty = (cDiff < 0 ? 0 : cDiff * 1.5) +
-                             (wDiff < 0 ? 0 : wDiff * 1.0) +
-                             (hDiff < 0 ? 0 : hDiff * 1.0) +
-                             (sDiff < 0 ? 0 : sDiff * 2.0);
-                             
-      const totalScore = tightPenalty + loosePenalty;
-      if (totalScore < minDiffScore) {
-        minDiffScore = totalScore;
-        bestPrecisionSize = sz.name;
+    // Calculate best Bottoms Size
+    let bestBottomsSize = '';
+    let minBottomsPenalty = 999999;
+
+    const targetSizes = sizes.length > 0 ? sizes.map(s => s.name) : ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+
+    for (const sizeName of targetSizes) {
+      // Tops penalty calculation
+      const topSpec = getTopsSpecs(sizeName);
+      let topsPenalty = 0;
+
+      // Chest
+      if (advChest < topSpec.min_chest) {
+        topsPenalty += (topSpec.min_chest - advChest) * 1.5; // Slightly loose
+      } else if (advChest > topSpec.max_chest) {
+        topsPenalty += (advChest - topSpec.max_chest) * 4.5; // Too tight!
+      }
+
+      // Shoulder
+      if (advShoulder < topSpec.min_shoulder) {
+        topsPenalty += (topSpec.min_shoulder - advShoulder) * 1.0;
+      } else if (advShoulder > topSpec.max_shoulder) {
+        topsPenalty += (advShoulder - topSpec.max_shoulder) * 4.0; // Tight shoulders are very uncomfortable
+      }
+
+      // Height
+      if (advHeight < topSpec.min_height) {
+        topsPenalty += (topSpec.min_height - advHeight) * 0.4;
+      } else if (advHeight > topSpec.max_height) {
+        topsPenalty += (advHeight - topSpec.max_height) * 1.5; // Short length!
+      }
+
+      // Shape
+      const shapeMatch = topSpec.shapes[advShape] === true || topSpec.shapes[advShape] === undefined;
+      if (!shapeMatch) {
+        topsPenalty += 10;
+      }
+
+      if (topsPenalty < minTopsPenalty) {
+        minTopsPenalty = topsPenalty;
+        bestTopsSize = sizeName;
+      }
+
+      // Bottoms penalty calculation
+      const botSpec = getBottomsSpecs(sizeName);
+      let bottomsPenalty = 0;
+
+      // Waist
+      if (advWaist < botSpec.min_waist) {
+        bottomsPenalty += (botSpec.min_waist - advWaist) * 1.2; // Slightly loose waist, can wear with belt
+      } else if (advWaist > botSpec.max_waist) {
+        bottomsPenalty += (advWaist - botSpec.max_waist) * 5.0; // Waist is tight, impossible to button!
+      }
+
+      // Hip
+      if (advHip < botSpec.min_hip) {
+        bottomsPenalty += (botSpec.min_hip - advHip) * 1.0;
+      } else if (advHip > botSpec.max_hip) {
+        bottomsPenalty += (advHip - botSpec.max_hip) * 4.0; // Too tight hip is uncomfortable
+      }
+
+      // Height
+      if (advHeight < botSpec.min_height) {
+        bottomsPenalty += (botSpec.min_height - advHeight) * 0.3;
+      } else if (advHeight > botSpec.max_height) {
+        bottomsPenalty += (advHeight - botSpec.max_height) * 1.2; // Too short pants!
+      }
+
+      // Shape
+      const botShapeMatch = botSpec.shapes[advShape] === true || botSpec.shapes[advShape] === undefined;
+      if (!botShapeMatch) {
+        bottomsPenalty += 10;
+      }
+
+      if (bottomsPenalty < minBottomsPenalty) {
+        minBottomsPenalty = bottomsPenalty;
+        bestBottomsSize = sizeName;
       }
     }
 
-    if (isPrecisionMode && bestPrecisionSize) {
-      theorizedSize = bestPrecisionSize;
-    } else if (!theorizedSize && bestPrecisionSize) {
-      theorizedSize = bestPrecisionSize;
-    }
-
-    // Default Fallback
-    if (!theorizedSize) {
-      if (advHeight < 165) theorizedSize = 'S';
-      else if (advHeight < 178) theorizedSize = 'M';
-      else if (advHeight < 188) theorizedSize = 'L';
-      else theorizedSize = 'XL';
-    }
-
-    // Generate specific fit hint based on nominal dimensions of matched size
-    const nominal = getNominalDimensions(theorizedSize);
-    const chestDiff = advChest - nominal.chest;
-    const waistDiff = advWaist - nominal.waist;
-    const hipDiff = advHip - nominal.hip;
-    const shoulderDiff = advShoulder - nominal.shoulder;
-
-    let fitHint = '';
-    if (Math.abs(chestDiff) <= 2) {
-      fitHint = isRtl ? "انطباق بی‌نظیر روی سینه" : "Perfect Fit on Chest";
-    } else if (Math.abs(waistDiff) <= 2) {
-      fitHint = isRtl ? "کمر کاملاً اندازه و استاندارد" : "Perfect Fit on Waist";
-    } else if (Math.abs(shoulderDiff) <= 1) {
-      fitHint = isRtl ? "سرشانه‌های دقیق و متناسب" : "Perfect Fit on Shoulders";
-    } else if (Math.abs(hipDiff) <= 2) {
-      fitHint = isRtl ? "ایده‌آل برای دور باسن" : "Perfect Fit on Hips";
+    // Determine fit hints for both
+    const finalTopSpec = getTopsSpecs(bestTopsSize);
+    let topHint = '';
+    if (advChest >= finalTopSpec.min_chest && advChest <= finalTopSpec.max_chest) {
+      topHint = isRtl ? "انطباق بی‌نظیر روی دور سینه" : "Perfect fit on chest";
+    } else if (advShoulder >= finalTopSpec.min_shoulder && advShoulder <= finalTopSpec.max_shoulder) {
+      topHint = isRtl ? "سرشانه‌های دقیق و متناسب" : "Perfect fit on shoulders";
     } else {
-      fitHint = isRtl ? "تن‌خور نسبتاً آزاد و متبوع" : "Comfortable Relaxed Fit";
+      topHint = isRtl ? "تن‌خور مناسب و متبوع" : "Comfortable relaxed fit";
     }
 
-    // Now cross-reference with our ACTIVE inventory matrix
+    const finalBotSpec = getBottomsSpecs(bestBottomsSize);
+    let botHint = '';
+    if (advWaist >= finalBotSpec.min_waist && advWaist <= finalBotSpec.max_waist) {
+      botHint = isRtl ? "کمر کاملاً اندازه و استاندارد" : "Perfect fit on waist";
+    } else if (advHip >= finalBotSpec.min_hip && advHip <= finalBotSpec.max_hip) {
+      botHint = isRtl ? "ایده‌آل برای دور باسن" : "Perfect fit on hips";
+    } else {
+      botHint = isRtl ? "سایز کمر آزاد و راحت" : "Relaxed waist fit";
+    }
+
+    // Set states
+    setCalculatedRecTops(bestTopsSize);
+    setCalculatedRecBottoms(bestBottomsSize);
+    setFitHintTops(topHint);
+    setFitHintBottoms(botHint);
+
+    // Identify which recommended size applies to the current product
+    const bottomProduct = isBottomProduct(product);
+    const resolvedProductSize = bottomProduct ? bestBottomsSize : bestTopsSize;
+    setCalculatedRec(resolvedProductSize);
+
+    // Cross-reference with active inventory for this product
     const activeInventoryInSize = inventory.filter(
       item => {
         const sizeObj = sizes.find(s => s.id === item.size_id);
-        return sizeObj?.name === theorizedSize && item.stock > 0;
+        return sizeObj?.name === resolvedProductSize && item.stock > 0;
       }
     );
-
-    setCalculatedRec(theorizedSize);
 
     if (activeInventoryInSize.length > 0) {
       setAdvisorIsAvailable(true);
       setAdvisorMessage(
         isRtl 
-          ? `سایز پیشنهادی شما ${theorizedSize} است (${fitHint}) و هم‌اکنون در انبار موجود است!`
-          : `Size ${theorizedSize} is recommended (${fitHint}) and is currently in stock!`
+          ? `سایز پیشنهادی برای این محصول (${bottomProduct ? "شلوار/پایین‌تنه" : "پیراهن/بالاتنه"}): سایز ${resolvedProductSize} است (${bottomProduct ? botHint : topHint}) و هم‌اکنون موجود است!`
+          : `Size ${resolvedProductSize} is recommended for this ${bottomProduct ? "bottom" : "top"} item (${bottomProduct ? botHint : topHint}) and is currently in stock!`
       );
 
       // Auto-select the size in the variant picker to help buyer checkout
-      const matchSizeObj = sizes.find(s => s.name === theorizedSize);
+      const matchSizeObj = sizes.find(s => s.name === resolvedProductSize);
       if (matchSizeObj) {
         setSelectedSize(matchSizeObj);
       }
@@ -316,14 +433,14 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
       if (allInStockSizes.length > 0) {
         setAdvisorMessage(
           isRtl
-            ? `اندازه دقیق بدنی شما ${theorizedSize} است (${fitHint}) اما متاسفانه ناموجود است. سایزهای جایگزین موجود در انبار: ${Array.from(new Set(allInStockSizes)).join(', ')}`
-            : `Your physical match is ${theorizedSize} (${fitHint}), but it is currently out of stock. Alternative sizes in stock: ${Array.from(new Set(allInStockSizes)).join(', ')}`
+            ? `اندازه دقیق بدنی شما برای این محصول ${resolvedProductSize} است (${bottomProduct ? botHint : topHint}) اما متاسفانه این سایز ناموجود است. سایزهای موجود: ${Array.from(new Set(allInStockSizes)).join(', ')}`
+            : `Your physical match is ${resolvedProductSize} (${bottomProduct ? botHint : topHint}), but it is currently out of stock. Alternative sizes in stock: ${Array.from(new Set(allInStockSizes)).join(', ')}`
         );
       } else {
         setAdvisorMessage(
           isRtl
-            ? `سایز ایده آل شما ${theorizedSize} است (${fitHint}) اما کل موجودی این کالا در انبار به اتمام رسیده است.`
-            : `Your calculated size is ${theorizedSize} (${fitHint}), but this product is completely out of stock.`
+            ? `سایز ایده آل شما ${resolvedProductSize} است (${bottomProduct ? botHint : topHint}) اما کل موجودی این کالا در انبار به اتمام رسیده است.`
+            : `Your calculated size is ${resolvedProductSize} (${bottomProduct ? botHint : topHint}), but this product is completely out of stock.`
         );
       }
     }
@@ -725,19 +842,51 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
                   </div>
 
                   {/* Sizing advisor result box */}
-                  <div className="p-6 rounded-xl bg-neutral-950/30 border border-neutral-800/60 flex flex-col justify-center items-center h-full text-center min-h-[180px]">
-                    <span className="text-[10px] font-bold text-neutral-500 uppercase mb-2">{t.recommended_size}</span>
+                  <div className="p-6 rounded-xl bg-neutral-950/30 border border-neutral-800/60 flex flex-col justify-between h-full min-h-[220px]">
+                    <div className="text-center mb-4">
+                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{isRtl ? "نتایج موتور هوشمند پیشنهاد سایز اختصاصی" : "Intelligent Size Advisor Results"}</span>
+                    </div>
                     
                     {calculatedRec ? (
-                      <div className="space-y-3">
-                        <p className="text-5xl font-black text-indigo-400 tracking-tight">{calculatedRec}</p>
-                        
+                      <div className="space-y-4">
+                        {/* Tops and Bottoms separate recommendations columns */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Tops card */}
+                          <div className={`p-3 rounded-lg border text-center transition-all ${!isBottomProduct(product) ? 'bg-indigo-500/10 border-indigo-500/30 ring-1 ring-indigo-500/20' : 'bg-neutral-900/40 border-neutral-800/60'}`}>
+                            <span className="block text-[10px] font-extrabold text-neutral-400 mb-1">{isRtl ? "بالاتنه (Tops)" : "Tops Size"}</span>
+                            <span className="block text-3xl font-black text-indigo-400 mb-1">{calculatedRecTops}</span>
+                            <span className="block text-[9px] text-neutral-400 font-medium leading-tight">{fitHintTops}</span>
+                            {!isBottomProduct(product) && (
+                              <span className="inline-block mt-2 px-1.5 py-0.5 rounded text-[8px] bg-indigo-500/25 text-indigo-300 font-bold">
+                                {isRtl ? "سایز این محصول" : "This Item Size"}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Bottoms card */}
+                          <div className={`p-3 rounded-lg border text-center transition-all ${isBottomProduct(product) ? 'bg-indigo-500/10 border-indigo-500/30 ring-1 ring-indigo-500/20' : 'bg-neutral-900/40 border-neutral-800/60'}`}>
+                            <span className="block text-[10px] font-extrabold text-neutral-400 mb-1">{isRtl ? "پایین‌تنه (Bottoms)" : "Bottoms Size"}</span>
+                            <span className="block text-3xl font-black text-indigo-400 mb-1">{calculatedRecBottoms}</span>
+                            <span className="block text-[9px] text-neutral-400 font-medium leading-tight">{fitHintBottoms}</span>
+                            {isBottomProduct(product) && (
+                              <span className="inline-block mt-2 px-1.5 py-0.5 rounded text-[8px] bg-indigo-500/25 text-indigo-300 font-bold">
+                                {isRtl ? "سایز این محصول" : "This Item Size"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Recommendation details & inventory availability message */}
                         <div className={`p-3 rounded-lg text-xs leading-relaxed ${advisorIsAvailable ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                          {advisorMessage}
+                          <div className="font-extrabold mb-1 flex items-center gap-1.5 justify-center">
+                            <span className={`w-1.5 h-1.5 rounded-full ${advisorIsAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></span>
+                            <span>{isRtl ? "سیستم هوشمند انطباق" : "Smart Compatibility Match"}</span>
+                          </div>
+                          <p className="text-center text-[11px]">{advisorMessage}</p>
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-2 text-neutral-400 py-6">
+                      <div className="space-y-2 text-neutral-400 py-10 text-center">
                         <Maximize2 className="w-8 h-8 mx-auto opacity-20" />
                         <p className="text-[10px]">{isRtl ? "ورودی‌های بدنی را مشخص کنید و پیشنهاد سایز را دریافت کنید." : "Provide parameters to calculate sizing match."}</p>
                       </div>

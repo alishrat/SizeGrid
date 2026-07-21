@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { locales } from '../locales';
 import { DirectusAPI } from '../directus';
 import { useRouter } from './Router';
@@ -47,22 +47,170 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
   // Quick Demo Interactive States
   const [demoHeight, setDemoHeight] = useState(172);
   const [demoWeight, setDemoWeight] = useState(68);
-  const [demoShape, setDemoShape] = useState<'slim' | 'athletic' | 'heavy'>('athletic');
+  const [demoShape, setDemoShape] = useState<'slim' | 'regular' | 'athletic' | 'heavy'>('athletic');
+  const [demoIsPrecisionMode, setDemoIsPrecisionMode] = useState<boolean>(false);
+  const [demoChest, setDemoChest] = useState<number>(95);
+  const [demoWaist, setDemoWaist] = useState<number>(82);
+  const [demoHip, setDemoHip] = useState<number>(97);
+  const [demoShoulder, setDemoShoulder] = useState<number>(42);
   const [demoResult, setDemoResult] = useState('');
+  const [demoResultTops, setDemoResultTops] = useState('');
+  const [demoResultBottoms, setDemoResultBottoms] = useState('');
+  const [demoFitHintTops, setDemoFitHintTops] = useState('');
+  const [demoFitHintBottoms, setDemoFitHintBottoms] = useState('');
+
+  // Auto-calculate body measurements on height/weight/shape changes if not in custom mode
+  useEffect(() => {
+    if (!demoIsPrecisionMode) {
+      let chest = demoWeight * 1.4;
+      let waist = demoWeight * 1.22;
+      let hip = demoWeight * 1.4;
+      let shoulder = demoHeight * 0.23;
+
+      if (demoShape === 'slim') {
+        chest = demoWeight * 1.35 + (demoHeight - 100) * 0.1;
+        waist = demoWeight * 1.10 + (demoHeight - 100) * 0.1;
+        hip = demoWeight * 1.35 + (demoHeight - 100) * 0.1;
+        shoulder = demoHeight * 0.22 - 1;
+      } else if (demoShape === 'athletic') {
+        chest = demoWeight * 1.45 + (demoHeight - 100) * 0.1;
+        waist = demoWeight * 1.18 + (demoHeight - 100) * 0.1;
+        hip = demoWeight * 1.42 + (demoHeight - 100) * 0.1;
+        shoulder = demoHeight * 0.23 + 2;
+      } else if (demoShape === 'heavy') {
+        chest = demoWeight * 1.55 + (demoHeight - 100) * 0.1;
+        waist = demoWeight * 1.45 + (demoHeight - 100) * 0.1;
+        hip = demoWeight * 1.50 + (demoHeight - 100) * 0.1;
+        shoulder = demoHeight * 0.23 + 1;
+      } else { // regular
+        chest = demoWeight * 1.40 + (demoHeight - 100) * 0.1;
+        waist = demoWeight * 1.22 + (demoHeight - 100) * 0.1;
+        hip = demoWeight * 1.40 + (demoHeight - 100) * 0.1;
+        shoulder = demoHeight * 0.23;
+      }
+
+      setDemoChest(Math.round(chest));
+      setDemoWaist(Math.round(waist));
+      setDemoHip(Math.round(hip));
+      setDemoShoulder(Math.round(shoulder));
+    }
+  }, [demoHeight, demoWeight, demoShape, demoIsPrecisionMode]);
 
   const calculateDemoSize = () => {
-    let size = 'L';
-    if (demoHeight < 165) {
-      if (demoWeight < 58) size = demoShape === 'slim' ? 'S' : 'M';
-      else size = 'M';
-    } else if (demoHeight <= 178) {
-      if (demoWeight < 70) size = demoShape === 'slim' ? 'M' : 'L';
-      else size = demoShape === 'heavy' ? 'XL' : 'L';
-    } else {
-      if (demoWeight < 85) size = demoShape === 'slim' ? 'L' : 'XL';
-      else size = 'XXL';
+    // Helpers to retrieve specifications for any size
+    const getTopsSpecs = (sizeName: string) => {
+      const name = sizeName.toUpperCase().trim();
+      if (name.includes('XS') || name === '36' || name === '۳۶') {
+        return { min_chest: 80, max_chest: 87, min_shoulder: 36, max_shoulder: 39, min_height: 150, max_height: 165 };
+      }
+      if (name.includes('XXXL') || name === '46' || name === '۴۶') {
+        return { min_chest: 116, max_chest: 125, min_shoulder: 48, max_shoulder: 51, min_height: 185, max_height: 205 };
+      }
+      if (name.includes('XXL') || name === '44' || name === '۴۴') {
+        return { min_chest: 110, max_chest: 116, min_shoulder: 46, max_shoulder: 48, min_height: 180, max_height: 195 };
+      }
+      if (name.includes('XL') || name === '42' || name === '۴۲') {
+        return { min_chest: 104, max_chest: 110, min_shoulder: 44, max_shoulder: 46, min_height: 175, max_height: 190 };
+      }
+      if (name.includes('L') || name === '40' || name === '۴۰') {
+        return { min_chest: 98, max_chest: 104, min_shoulder: 42, max_shoulder: 44, min_height: 170, max_height: 185 };
+      }
+      if (name.includes('M') || name === '38' || name === '۳۸') {
+        return { min_chest: 92, max_chest: 98, min_shoulder: 40, max_shoulder: 42, min_height: 165, max_height: 178 };
+      }
+      if (name.includes('S') || name === '37' || name === '۳۷') {
+        return { min_chest: 86, max_chest: 92, min_shoulder: 38, max_shoulder: 40, min_height: 155, max_height: 172 };
+      }
+      return { min_chest: 92, max_chest: 98, min_shoulder: 40, max_shoulder: 42, min_height: 165, max_height: 178 };
+    };
+
+    const getBottomsSpecs = (sizeName: string) => {
+      const name = sizeName.toUpperCase().trim();
+      if (name.includes('XS') || name === '36' || name === '۳۶') {
+        return { min_waist: 60, max_waist: 68, min_hip: 84, max_hip: 90, min_height: 150, max_height: 165 };
+      }
+      if (name.includes('XXXL') || name === '46' || name === '۴۶') {
+        return { min_waist: 106, max_waist: 116, min_hip: 120, max_hip: 130, min_height: 185, max_height: 205 };
+      }
+      if (name.includes('XXL') || name === '44' || name === '۴۴') {
+        return { min_waist: 98, max_waist: 106, min_hip: 114, max_hip: 120, min_height: 180, max_height: 195 };
+      }
+      if (name.includes('XL') || name === '42' || name === '۴۲') {
+        return { min_waist: 90, max_waist: 98, min_hip: 108, max_hip: 114, min_height: 175, max_height: 190 };
+      }
+      if (name.includes('L') || name === '40' || name === '۴۰') {
+        return { min_waist: 82, max_waist: 90, min_hip: 102, max_hip: 108, min_height: 170, max_height: 185 };
+      }
+      if (name.includes('M') || name === '38' || name === '۳۸') {
+        return { min_waist: 74, max_waist: 82, min_hip: 96, max_hip: 102, min_height: 165, max_height: 178 };
+      }
+      if (name.includes('S') || name === '37' || name === '۳۷') {
+        return { min_waist: 66, max_waist: 74, min_hip: 90, max_hip: 96, min_height: 155, max_height: 172 };
+      }
+      return { min_waist: 74, max_waist: 82, min_hip: 96, max_hip: 102, min_height: 165, max_height: 178 };
+    };
+
+    const targetSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+
+    let bestTopsSize = 'M';
+    let minTopsPenalty = 999999;
+    
+    let bestBottomsSize = 'M';
+    let minBottomsPenalty = 999999;
+
+    for (const sizeName of targetSizes) {
+      // Tops
+      const topSpec = getTopsSpecs(sizeName);
+      let topsPenalty = 0;
+      if (demoChest < topSpec.min_chest) topsPenalty += (topSpec.min_chest - demoChest) * 1.5;
+      else if (demoChest > topSpec.max_chest) topsPenalty += (demoChest - topSpec.max_chest) * 4.5;
+      if (demoShoulder < topSpec.min_shoulder) topsPenalty += (topSpec.min_shoulder - demoShoulder) * 1.0;
+      else if (demoShoulder > topSpec.max_shoulder) topsPenalty += (demoShoulder - topSpec.max_shoulder) * 4.0;
+      if (demoHeight < topSpec.min_height) topsPenalty += (topSpec.min_height - demoHeight) * 0.4;
+      else if (demoHeight > topSpec.max_height) topsPenalty += (demoHeight - topSpec.max_height) * 1.5;
+
+      if (topsPenalty < minTopsPenalty) {
+        minTopsPenalty = topsPenalty;
+        bestTopsSize = sizeName;
+      }
+
+      // Bottoms
+      const botSpec = getBottomsSpecs(sizeName);
+      let bottomsPenalty = 0;
+      if (demoWaist < botSpec.min_waist) bottomsPenalty += (botSpec.min_waist - demoWaist) * 1.2;
+      else if (demoWaist > botSpec.max_waist) bottomsPenalty += (demoWaist - botSpec.max_waist) * 5.0;
+      if (demoHip < botSpec.min_hip) bottomsPenalty += (botSpec.min_hip - demoHip) * 1.0;
+      else if (demoHip > botSpec.max_hip) bottomsPenalty += (demoHip - botSpec.max_hip) * 4.0;
+      if (demoHeight < botSpec.min_height) bottomsPenalty += (botSpec.min_height - demoHeight) * 0.3;
+      else if (demoHeight > botSpec.max_height) bottomsPenalty += (demoHeight - botSpec.max_height) * 1.2;
+
+      if (bottomsPenalty < minBottomsPenalty) {
+        minBottomsPenalty = bottomsPenalty;
+        bestBottomsSize = sizeName;
+      }
     }
-    setDemoResult(size);
+
+    const finalTopSpec = getTopsSpecs(bestTopsSize);
+    let topHint = '';
+    if (demoChest >= finalTopSpec.min_chest && demoChest <= finalTopSpec.max_chest) {
+      topHint = isRtl ? "انطباق بی‌نظیر روی دور سینه" : "Perfect fit on chest";
+    } else {
+      topHint = isRtl ? "تن‌خور متناسب و متبوع" : "Comfortable relaxed fit";
+    }
+
+    const finalBotSpec = getBottomsSpecs(bestBottomsSize);
+    let botHint = '';
+    if (demoWaist >= finalBotSpec.min_waist && demoWaist <= finalBotSpec.max_waist) {
+      botHint = isRtl ? "کمر کاملاً اندازه و استاندارد" : "Perfect fit on waist";
+    } else {
+      botHint = isRtl ? "کمر آزاد و متبوع" : "Comfortable waist fit";
+    }
+
+    setDemoResultTops(bestTopsSize);
+    setDemoResultBottoms(bestBottomsSize);
+    setDemoFitHintTops(topHint);
+    setDemoFitHintBottoms(botHint);
+    setDemoResult(bestTopsSize); // Default main value for backward compatibility
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -440,87 +588,209 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
               
               {/* Form Input fields */}
               <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <label className="text-xs font-bold text-neutral-400">{t.height_cm}</label>
-                    <span className="text-xs font-extrabold text-sky-500">{demoHeight} cm</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="140" 
-                    max="220" 
-                    value={demoHeight}
-                    onChange={(e) => setDemoHeight(Number(e.target.value))}
-                    className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
-                  />
+                
+                {/* Mode Selector */}
+                <div className="flex bg-neutral-950/20 p-1 rounded-lg border border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setDemoIsPrecisionMode(false)}
+                    className={`flex-1 py-1.5 text-center text-xs font-bold rounded transition-all cursor-pointer ${!demoIsPrecisionMode ? 'bg-sky-600 text-white shadow' : 'text-neutral-400 hover:text-neutral-200'}`}
+                  >
+                    {isRtl ? "محاسبه هوشمند (سریع)" : "Smart Estimation (Quick)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoIsPrecisionMode(true)}
+                    className={`flex-1 py-1.5 text-center text-xs font-bold rounded transition-all cursor-pointer ${demoIsPrecisionMode ? 'bg-sky-600 text-white shadow' : 'text-neutral-400 hover:text-neutral-200'}`}
+                  >
+                    {isRtl ? "ورود دقیق اندازه‌ها" : "Exact Measurements"}
+                  </button>
                 </div>
 
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <label className="text-xs font-bold text-neutral-400">{t.weight_kg}</label>
-                    <span className="text-xs font-extrabold text-sky-500">{demoWeight} kg</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="40" 
-                    max="140" 
-                    value={demoWeight}
-                    onChange={(e) => setDemoWeight(Number(e.target.value))}
-                    className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
-                  />
-                </div>
+                {!demoIsPrecisionMode ? (
+                  <>
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <label className="text-xs font-bold text-neutral-400">{t.height_cm}</label>
+                        <span className="text-xs font-extrabold text-sky-500">{demoHeight} cm</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="140" 
+                        max="220" 
+                        value={demoHeight}
+                        onChange={(e) => setDemoHeight(Number(e.target.value))}
+                        className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-bold mb-1.5 text-neutral-400">{t.body_shape}</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setDemoShape('slim')}
-                      className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all ${demoShape === 'slim' ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-neutral-800 text-neutral-400'}`}
-                    >
-                      {t.shape_slim}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDemoShape('athletic')}
-                      className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all ${demoShape === 'athletic' ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-neutral-800 text-neutral-400'}`}
-                    >
-                      {t.shape_athletic}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDemoShape('heavy')}
-                      className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all ${demoShape === 'heavy' ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-neutral-800 text-neutral-400'}`}
-                    >
-                      {t.shape_heavy}
-                    </button>
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <label className="text-xs font-bold text-neutral-400">{t.weight_kg}</label>
+                        <span className="text-xs font-extrabold text-sky-500">{demoWeight} kg</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="40" 
+                        max="140" 
+                        value={demoWeight}
+                        onChange={(e) => setDemoWeight(Number(e.target.value))}
+                        className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5 text-neutral-400">{t.body_shape}</label>
+                      <div className="grid grid-cols-4 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setDemoShape('slim')}
+                          className={`py-2 px-1 text-[10px] font-semibold rounded-lg border transition-all ${demoShape === 'slim' ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-neutral-800 text-neutral-400'}`}
+                        >
+                          {t.shape_slim}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDemoShape('regular')}
+                          className={`py-2 px-1 text-[10px] font-semibold rounded-lg border transition-all ${demoShape === 'regular' ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-neutral-800 text-neutral-400'}`}
+                        >
+                          {isRtl ? "معمولی" : "Regular"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDemoShape('athletic')}
+                          className={`py-2 px-1 text-[10px] font-semibold rounded-lg border transition-all ${demoShape === 'athletic' ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-neutral-800 text-neutral-400'}`}
+                        >
+                          {t.shape_athletic}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDemoShape('heavy')}
+                          className={`py-2 px-1 text-[10px] font-semibold rounded-lg border transition-all ${demoShape === 'heavy' ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-neutral-800 text-neutral-400'}`}
+                        >
+                          {t.shape_heavy}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Automatic Estimation Summary Block */}
+                    <div className="p-2.5 rounded-lg bg-neutral-950/20 border border-white/5 text-[10px] text-neutral-400 space-y-1">
+                      <p className="font-extrabold text-[11px] text-neutral-300">{isRtl ? "ابعاد بدنی محاسبه‌شده بر اساس فرمول زنده:" : "Computed dimensions based on physical formula:"}</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div>{isRtl ? `دور سینه: ${demoChest} سانتی‌متر` : `Chest/Bust: ${demoChest} cm`}</div>
+                        <div>{isRtl ? `دور کمر: ${demoWaist} سانتی‌متر` : `Waistline: ${demoWaist} cm`}</div>
+                        <div>{isRtl ? `دور باسن: ${demoHip} سانتی‌متر` : `Hips: ${demoHip} cm`}</div>
+                        <div>{isRtl ? `سرشانه: ${demoShoulder} سانتی‌متر` : `Shoulder Width: ${demoShoulder} cm`}</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-3 p-3 rounded-xl bg-sky-950/10 border border-sky-500/10">
+                    <div>
+                      <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                        <span>{isRtl ? "دور سینه (بالاتنه)" : "Chest / Bust (Tops)"}</span>
+                        <span className="text-sky-500 font-extrabold">{demoChest} cm</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="70"
+                        max="140"
+                        value={demoChest}
+                        onChange={(e) => setDemoChest(Number(e.target.value))}
+                        className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                        <span>{isRtl ? "دور کمر (پایین‌تنه)" : "Waistline (Bottoms)"}</span>
+                        <span className="text-sky-500 font-extrabold">{demoWaist} cm</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="60"
+                        max="130"
+                        value={demoWaist}
+                        onChange={(e) => setDemoWaist(Number(e.target.value))}
+                        className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                        <span>{isRtl ? "دور باسن (پایین‌تنه)" : "Hip Width (Bottoms)"}</span>
+                        <span className="text-sky-500 font-extrabold">{demoHip} cm</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="70"
+                        max="140"
+                        value={demoHip}
+                        onChange={(e) => setDemoHip(Number(e.target.value))}
+                        className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                        <span>{isRtl ? "عرض سرشانه (بالاتنه)" : "Shoulder Width (Tops)"}</span>
+                        <span className="text-sky-500 font-extrabold">{demoShoulder} cm</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="30"
+                        max="60"
+                        value={demoShoulder}
+                        onChange={(e) => setDemoShoulder(Number(e.target.value))}
+                        className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <button
                   type="button"
                   onClick={calculateDemoSize}
-                  className="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold rounded-lg transition-all"
+                  className="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold rounded-lg transition-all cursor-pointer"
                 >
                   {t.calculate_size}
                 </button>
               </div>
 
               {/* Dynamic Sizing recommendation Output */}
-              <div className="flex flex-col justify-center items-center bg-neutral-950/20 rounded-xl p-6 border border-neutral-800/40">
-                <p className="text-xs text-neutral-400 font-bold mb-2">{t.recommended_size}</p>
+              <div className="flex flex-col justify-between bg-neutral-950/20 rounded-xl p-5 border border-neutral-800/40 min-h-[220px]">
+                <div className="text-center mb-3">
+                  <p className="text-xs text-neutral-400 font-bold">{isRtl ? "نتایج موتور هوشمند دمو" : "Live Sizing Recommendations"}</p>
+                </div>
                 
                 {demoResult ? (
-                  <div className="text-center space-y-2">
-                    <p className="text-6xl font-black text-sky-500 tracking-tight animate-bounce">{demoResult}</p>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{isRtl ? "موجود در انبار دمو" : "In Stock (Demo)"}</span>
-                    </span>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Tops size display */}
+                      <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-lg text-center">
+                        <span className="block text-[10px] font-bold text-neutral-400 mb-0.5">{isRtl ? "بالاتنه (Tops)" : "Tops Size"}</span>
+                        <span className="block text-3xl font-black text-sky-400 mb-0.5">{demoResultTops}</span>
+                        <span className="block text-[8px] text-neutral-400 leading-none">{demoFitHintTops}</span>
+                      </div>
+
+                      {/* Bottoms size display */}
+                      <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-lg text-center">
+                        <span className="block text-[10px] font-bold text-neutral-400 mb-0.5">{isRtl ? "پایین‌تنه (Bottoms)" : "Bottoms Size"}</span>
+                        <span className="block text-3xl font-black text-sky-400 mb-0.5">{demoResultBottoms}</span>
+                        <span className="block text-[8px] text-neutral-400 leading-none">{demoFitHintBottoms}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-center mt-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{isRtl ? "اندازه‌ها کاملاً منطبق با استانداردهای هوشمند" : "Sizes calculated securely offline"}</span>
+                      </span>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-center text-neutral-500 text-xs py-8">
-                    {isRtl ? "قد و وزن را تغییر دهید و روی محاسبه کلیک کنید" : "Adjust inputs and trigger calculation"}
+                  <div className="text-center text-neutral-500 text-xs py-12">
+                    {isRtl ? "قد، وزن یا اندازه‌ها را تغییر دهید و روی دکمه محاسبه کلیک کنید" : "Adjust parameters and click calculate"}
                   </div>
                 )}
               </div>

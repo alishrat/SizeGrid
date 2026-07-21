@@ -37,6 +37,104 @@ import {
   Ruler
 } from 'lucide-react';
 
+const getDefaultMeasurementsForSize = (sizeName: string) => {
+  const name = sizeName.toUpperCase().trim();
+  if (name.includes('XS') || name === '36' || name === '۳۶') {
+    return {
+      min_height: 145, max_height: 165,
+      min_weight: 40, max_weight: 55,
+      min_chest: 80, max_chest: 88,
+      min_waist: 65, max_waist: 73,
+      min_hip: 82, max_hip: 90,
+      min_shoulder: 36, max_shoulder: 39,
+      min_sleeve: 52, max_sleeve: 56,
+      min_length: 60, max_length: 66,
+    };
+  }
+  if (name.includes('XXXL') || name === '46' || name === '۴۶') {
+    return {
+      min_height: 180, max_height: 205,
+      min_weight: 95, max_weight: 120,
+      min_chest: 114, max_chest: 124,
+      min_waist: 102, max_waist: 112,
+      min_hip: 116, max_hip: 126,
+      min_shoulder: 48, max_shoulder: 52,
+      min_sleeve: 64, max_sleeve: 68,
+      min_length: 78, max_length: 84,
+    };
+  }
+  if (name.includes('XXL') || name === '44' || name === '۴۴') {
+    return {
+      min_height: 175, max_height: 195,
+      min_weight: 85, max_weight: 100,
+      min_chest: 108, max_chest: 116,
+      min_waist: 96, max_waist: 104,
+      min_hip: 110, max_hip: 118,
+      min_shoulder: 46, max_shoulder: 49,
+      min_sleeve: 62, max_sleeve: 65,
+      min_length: 76, max_length: 81,
+    };
+  }
+  if (name.includes('XL') || name === '42' || name === '۴۲') {
+    return {
+      min_height: 172, max_height: 188,
+      min_weight: 75, max_weight: 90,
+      min_chest: 102, max_chest: 110,
+      min_waist: 90, max_waist: 98,
+      min_hip: 104, max_hip: 112,
+      min_shoulder: 44, max_shoulder: 47,
+      min_sleeve: 60, max_sleeve: 63,
+      min_length: 73, max_length: 78,
+    };
+  }
+  if (name.includes('L') || name === '40' || name === '۴۰') {
+    return {
+      min_height: 168, max_height: 182,
+      min_weight: 65, max_weight: 80,
+      min_chest: 96, max_chest: 104,
+      min_waist: 84, max_waist: 92,
+      min_hip: 98, max_hip: 106,
+      min_shoulder: 42, max_shoulder: 45,
+      min_sleeve: 58, max_sleeve: 61,
+      min_length: 70, max_length: 75,
+    };
+  }
+  if (name.includes('M') || name === '38' || name === '۳۸') {
+    return {
+      min_height: 160, max_height: 176,
+      min_weight: 55, max_weight: 70,
+      min_chest: 90, max_chest: 98,
+      min_waist: 78, max_waist: 86,
+      min_hip: 92, max_hip: 100,
+      min_shoulder: 40, max_shoulder: 43,
+      min_sleeve: 56, max_sleeve: 59,
+      min_length: 67, max_length: 72,
+    };
+  }
+  if (name.includes('S') || name === '37' || name === '۳۷') {
+    return {
+      min_height: 152, max_height: 168,
+      min_weight: 48, max_weight: 60,
+      min_chest: 84, max_chest: 92,
+      min_waist: 72, max_waist: 80,
+      min_hip: 86, max_hip: 94,
+      min_shoulder: 38, max_shoulder: 41,
+      min_sleeve: 54, max_sleeve: 57,
+      min_length: 64, max_length: 69,
+    };
+  }
+  return {
+    min_height: 150, max_height: 180,
+    min_weight: 50, max_weight: 80,
+    min_chest: 85, max_chest: 105,
+    min_waist: 75, max_waist: 95,
+    min_hip: 85, max_hip: 105,
+    min_shoulder: 38, max_shoulder: 46,
+    min_sleeve: 55, max_sleeve: 63,
+    min_length: 65, max_length: 75,
+  };
+};
+
 interface DashboardProps {
   lang: 'fa' | 'en';
   setLang: (lang: 'fa' | 'en') => void;
@@ -73,7 +171,26 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
   const [templatesList, setTemplatesList] = useState<SizeGuideTemplate[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<SizeGuideTemplate | null>(null);
   const [templateFormName, setTemplateFormName] = useState('');
-  const [templateFormState, setTemplateFormState] = useState<Record<string, { enabled: boolean; min_height: number; max_height: number; min_weight: number; max_weight: number; shapes: { slim: boolean; athletic: boolean; heavy: boolean } }>>({});
+  const [templateFormState, setTemplateFormState] = useState<Record<string, {
+    enabled: boolean;
+    min_height: number;
+    max_height: number;
+    min_weight: number;
+    max_weight: number;
+    min_chest?: number;
+    max_chest?: number;
+    min_waist?: number;
+    max_waist?: number;
+    min_hip?: number;
+    max_hip?: number;
+    min_shoulder?: number;
+    max_shoulder?: number;
+    min_sleeve?: number;
+    max_sleeve?: number;
+    min_length?: number;
+    max_length?: number;
+    shapes: { slim: boolean; regular?: boolean; athletic: boolean; heavy: boolean }
+  }>>({});
   const [savingTemplate, setSavingTemplate] = useState(false);
 
   // Custom Sizes State
@@ -111,7 +228,26 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
   // Size Guides state within Edit Form
   const [sizeGuidesList, setSizeGuidesList] = useState<any[]>([]);
-  const [sizeGuidesFormState, setSizeGuidesFormState] = useState<Record<string, { enabled: boolean; min_height: number; max_height: number; min_weight: number; max_weight: number; shapes: { slim: boolean; athletic: boolean; heavy: boolean } }>>({});
+  const [sizeGuidesFormState, setSizeGuidesFormState] = useState<Record<string, {
+    enabled: boolean;
+    min_height: number;
+    max_height: number;
+    min_weight: number;
+    max_weight: number;
+    min_chest?: number;
+    max_chest?: number;
+    min_waist?: number;
+    max_waist?: number;
+    min_hip?: number;
+    max_hip?: number;
+    min_shoulder?: number;
+    max_shoulder?: number;
+    min_sleeve?: number;
+    max_sleeve?: number;
+    min_length?: number;
+    max_length?: number;
+    shapes: { slim: boolean; regular?: boolean; athletic: boolean; heavy: boolean }
+  }>>({});
   const [savingSizeGuides, setSavingSizeGuides] = useState(false);
 
   // Warehouse Search and Quick Update State
@@ -249,12 +385,25 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     // Initialize clean guides
     const formState: Record<string, any> = {};
     sizes.forEach(sz => {
+      const defaults = getDefaultMeasurementsForSize(sz.name);
       formState[sz.id] = {
         enabled: false,
-        min_height: 150,
-        max_height: 180,
-        min_weight: 50,
-        max_weight: 80,
+        min_height: defaults.min_height,
+        max_height: defaults.max_height,
+        min_weight: defaults.min_weight,
+        max_weight: defaults.max_weight,
+        min_chest: defaults.min_chest,
+        max_chest: defaults.max_chest,
+        min_waist: defaults.min_waist,
+        max_waist: defaults.max_waist,
+        min_hip: defaults.min_hip,
+        max_hip: defaults.max_hip,
+        min_shoulder: defaults.min_shoulder,
+        max_shoulder: defaults.max_shoulder,
+        min_sleeve: defaults.min_sleeve,
+        max_sleeve: defaults.max_sleeve,
+        min_length: defaults.min_length,
+        max_length: defaults.max_length,
         shapes: { slim: true, athletic: true, heavy: false }
       };
     });
@@ -309,11 +458,24 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       const formState: Record<string, any> = {};
       sizes.forEach(sz => {
         const matchedGuide = guides.find(g => g.size_id === sz.id);
+        const defaults = getDefaultMeasurementsForSize(sz.name);
         let measurements = {
-          min_height: 150,
-          max_height: 180,
-          min_weight: 50,
-          max_weight: 80,
+          min_height: defaults.min_height,
+          max_height: defaults.max_height,
+          min_weight: defaults.min_weight,
+          max_weight: defaults.max_weight,
+          min_chest: defaults.min_chest,
+          max_chest: defaults.max_chest,
+          min_waist: defaults.min_waist,
+          max_waist: defaults.max_waist,
+          min_hip: defaults.min_hip,
+          max_hip: defaults.max_hip,
+          min_shoulder: defaults.min_shoulder,
+          max_shoulder: defaults.max_shoulder,
+          min_sleeve: defaults.min_sleeve,
+          max_sleeve: defaults.max_sleeve,
+          min_length: defaults.min_length,
+          max_length: defaults.max_length,
           shapes: { slim: true, athletic: true, heavy: false }
         };
 
@@ -323,14 +485,26 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             : matchedGuide.measurements;
 
           measurements = {
-            min_height: Number(rawMeas?.min_height ?? 150),
-            max_height: Number(rawMeas?.max_height ?? 180),
-            min_weight: Number(rawMeas?.min_weight ?? 50),
-            max_weight: Number(rawMeas?.max_weight ?? 80),
+            min_height: Number(rawMeas?.min_height ?? defaults.min_height),
+            max_height: Number(rawMeas?.max_height ?? defaults.max_height),
+            min_weight: Number(rawMeas?.min_weight ?? defaults.min_weight),
+            max_weight: Number(rawMeas?.max_weight ?? defaults.max_weight),
+            min_chest: rawMeas?.min_chest !== undefined ? Number(rawMeas.min_chest) : defaults.min_chest,
+            max_chest: rawMeas?.max_chest !== undefined ? Number(rawMeas.max_chest) : defaults.max_chest,
+            min_waist: rawMeas?.min_waist !== undefined ? Number(rawMeas.min_waist) : defaults.min_waist,
+            max_waist: rawMeas?.max_waist !== undefined ? Number(rawMeas.max_waist) : defaults.max_waist,
+            min_hip: rawMeas?.min_hip !== undefined ? Number(rawMeas.min_hip) : defaults.min_hip,
+            max_hip: rawMeas?.max_hip !== undefined ? Number(rawMeas.max_hip) : defaults.max_hip,
+            min_shoulder: rawMeas?.min_shoulder !== undefined ? Number(rawMeas.min_shoulder) : defaults.min_shoulder,
+            max_shoulder: rawMeas?.max_shoulder !== undefined ? Number(rawMeas.max_shoulder) : defaults.max_shoulder,
+            min_sleeve: rawMeas?.min_sleeve !== undefined ? Number(rawMeas.min_sleeve) : defaults.min_sleeve,
+            max_sleeve: rawMeas?.max_sleeve !== undefined ? Number(rawMeas.max_sleeve) : defaults.max_sleeve,
+            min_length: rawMeas?.min_length !== undefined ? Number(rawMeas.min_length) : defaults.min_length,
+            max_length: rawMeas?.max_length !== undefined ? Number(rawMeas.max_length) : defaults.max_length,
             shapes: {
-              slim: !!rawMeas?.shapes?.slim,
-              athletic: !!rawMeas?.shapes?.athletic,
-              heavy: !!rawMeas?.shapes?.heavy,
+              slim: rawMeas?.shapes?.slim !== undefined ? !!rawMeas.shapes.slim : true,
+              athletic: rawMeas?.shapes?.athletic !== undefined ? !!rawMeas.shapes.athletic : true,
+              heavy: rawMeas?.shapes?.heavy !== undefined ? !!rawMeas.shapes.heavy : false,
             }
           };
         }
@@ -341,6 +515,18 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
           max_height: measurements.max_height,
           min_weight: measurements.min_weight,
           max_weight: measurements.max_weight,
+          min_chest: measurements.min_chest,
+          max_chest: measurements.max_chest,
+          min_waist: measurements.min_waist,
+          max_waist: measurements.max_waist,
+          min_hip: measurements.min_hip,
+          max_hip: measurements.max_hip,
+          min_shoulder: measurements.min_shoulder,
+          max_shoulder: measurements.max_shoulder,
+          min_sleeve: measurements.min_sleeve,
+          max_sleeve: measurements.max_sleeve,
+          min_length: measurements.min_length,
+          max_length: measurements.max_length,
           shapes: measurements.shapes
         };
       });
@@ -564,6 +750,18 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               max_height: Number(cell.max_height),
               min_weight: Number(cell.min_weight),
               max_weight: Number(cell.max_weight),
+              min_chest: cell.min_chest !== undefined ? Number(cell.min_chest) : undefined,
+              max_chest: cell.max_chest !== undefined ? Number(cell.max_chest) : undefined,
+              min_waist: cell.min_waist !== undefined ? Number(cell.min_waist) : undefined,
+              max_waist: cell.max_waist !== undefined ? Number(cell.max_waist) : undefined,
+              min_hip: cell.min_hip !== undefined ? Number(cell.min_hip) : undefined,
+              max_hip: cell.max_hip !== undefined ? Number(cell.max_hip) : undefined,
+              min_shoulder: cell.min_shoulder !== undefined ? Number(cell.min_shoulder) : undefined,
+              max_shoulder: cell.max_shoulder !== undefined ? Number(cell.max_shoulder) : undefined,
+              min_sleeve: cell.min_sleeve !== undefined ? Number(cell.min_sleeve) : undefined,
+              max_sleeve: cell.max_sleeve !== undefined ? Number(cell.max_sleeve) : undefined,
+              min_length: cell.min_length !== undefined ? Number(cell.min_length) : undefined,
+              max_length: cell.max_length !== undefined ? Number(cell.max_length) : undefined,
               shapes: cell.shapes
             });
           }
@@ -613,6 +811,18 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               max_height: Number(formCell.max_height),
               min_weight: Number(formCell.min_weight),
               max_weight: Number(formCell.max_weight),
+              min_chest: formCell.min_chest !== undefined ? Number(formCell.min_chest) : undefined,
+              max_chest: formCell.max_chest !== undefined ? Number(formCell.max_chest) : undefined,
+              min_waist: formCell.min_waist !== undefined ? Number(formCell.min_waist) : undefined,
+              max_waist: formCell.max_waist !== undefined ? Number(formCell.max_waist) : undefined,
+              min_hip: formCell.min_hip !== undefined ? Number(formCell.min_hip) : undefined,
+              max_hip: formCell.max_hip !== undefined ? Number(formCell.max_hip) : undefined,
+              min_shoulder: formCell.min_shoulder !== undefined ? Number(formCell.min_shoulder) : undefined,
+              max_shoulder: formCell.max_shoulder !== undefined ? Number(formCell.max_shoulder) : undefined,
+              min_sleeve: formCell.min_sleeve !== undefined ? Number(formCell.min_sleeve) : undefined,
+              max_sleeve: formCell.max_sleeve !== undefined ? Number(formCell.max_sleeve) : undefined,
+              min_length: formCell.min_length !== undefined ? Number(formCell.min_length) : undefined,
+              max_length: formCell.max_length !== undefined ? Number(formCell.max_length) : undefined,
               shapes: formCell.shapes
             };
             await DirectusAPI.saveSizeGuide(
@@ -1733,10 +1943,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                           </div>
 
                                           {cell.enabled ? (
-                                            <div className="flex-1 grid sm:grid-cols-3 gap-6">
-                                              {/* Height bounds */}
-                                              <div className="space-y-1.5">
-                                                <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "حدود قد مناسب (سانتی‌متر):" : "Height Range (cm):"}</span>
+                                            <div className="flex-1 grid grid-cols-1 gap-4">
+                                              <div className="grid sm:grid-cols-3 gap-6">
+                                                {/* Height bounds */}
+                                                <div className="space-y-1.5">
+                                                  <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "حدود قد مناسب (سانتی‌متر):" : "Height Range (cm):"}</span>
                                                 <div className="flex items-center gap-1.5">
                                                   <input
                                                     type="number"
@@ -1816,6 +2027,143 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                     />
                                                     <span>{isRtl ? "توپر" : "Heavy"}</span>
                                                   </label>
+                                                </div>
+                                              </div>
+
+                                              </div>
+
+                                              {/* Precise clothing body-part measurements */}
+                                              <div className="border-t border-white/5 pt-3 mt-1 grid grid-cols-2 md:grid-cols-6 gap-3">
+                                                {/* Chest */}
+                                                <div className="space-y-1">
+                                                  <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور سینه:" : "Chest:"}</span>
+                                                  <div className="flex items-center gap-1">
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Min"
+                                                      value={cell.min_chest ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_chest', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                    <span className="text-neutral-500 text-[10px]">-</span>
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Max"
+                                                      value={cell.max_chest ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_chest', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                  </div>
+                                                </div>
+
+                                                {/* Waist */}
+                                                <div className="space-y-1">
+                                                  <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور کمر:" : "Waist:"}</span>
+                                                  <div className="flex items-center gap-1">
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Min"
+                                                      value={cell.min_waist ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_waist', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                    <span className="text-neutral-500 text-[10px]">-</span>
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Max"
+                                                      value={cell.max_waist ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_waist', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                  </div>
+                                                </div>
+
+                                                {/* Hip */}
+                                                <div className="space-y-1">
+                                                  <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور باسن:" : "Hips:"}</span>
+                                                  <div className="flex items-center gap-1">
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Min"
+                                                      value={cell.min_hip ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_hip', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                    <span className="text-neutral-500 text-[10px]">-</span>
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Max"
+                                                      value={cell.max_hip ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_hip', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                  </div>
+                                                </div>
+
+                                                {/* Shoulder */}
+                                                <div className="space-y-1">
+                                                  <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "سرشانه:" : "Shoulder:"}</span>
+                                                  <div className="flex items-center gap-1">
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Min"
+                                                      value={cell.min_shoulder ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_shoulder', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                    <span className="text-neutral-500 text-[10px]">-</span>
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Max"
+                                                      value={cell.max_shoulder ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_shoulder', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                  </div>
+                                                </div>
+
+                                                {/* Sleeve */}
+                                                <div className="space-y-1">
+                                                  <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "قد آستین:" : "Sleeve:"}</span>
+                                                  <div className="flex items-center gap-1">
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Min"
+                                                      value={cell.min_sleeve ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_sleeve', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                    <span className="text-neutral-500 text-[10px]">-</span>
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Max"
+                                                      value={cell.max_sleeve ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_sleeve', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                  </div>
+                                                </div>
+
+                                                {/* Length */}
+                                                <div className="space-y-1">
+                                                  <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "قد لباس:" : "Length:"}</span>
+                                                  <div className="flex items-center gap-1">
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Min"
+                                                      value={cell.min_length ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_length', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                    <span className="text-neutral-500 text-[10px]">-</span>
+                                                    <input
+                                                      type="number"
+                                                      placeholder="Max"
+                                                      value={cell.max_length ?? ''}
+                                                      onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_length', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                      className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    />
+                                                  </div>
                                                 </div>
                                               </div>
                                             </div>
@@ -2218,12 +2566,25 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                           setTemplateFormName('');
                           const formState: Record<string, any> = {};
                           sizes.forEach(sz => {
+                            const defaults = getDefaultMeasurementsForSize(sz.name);
                             formState[sz.id] = {
                               enabled: false,
-                              min_height: 150,
-                              max_height: 180,
-                              min_weight: 50,
-                              max_weight: 80,
+                              min_height: defaults.min_height,
+                              max_height: defaults.max_height,
+                              min_weight: defaults.min_weight,
+                              max_weight: defaults.max_weight,
+                              min_chest: defaults.min_chest,
+                              max_chest: defaults.max_chest,
+                              min_waist: defaults.min_waist,
+                              max_waist: defaults.max_waist,
+                              min_hip: defaults.min_hip,
+                              max_hip: defaults.max_hip,
+                              min_shoulder: defaults.min_shoulder,
+                              max_shoulder: defaults.max_shoulder,
+                              min_sleeve: defaults.min_sleeve,
+                              max_sleeve: defaults.max_sleeve,
+                              min_length: defaults.min_length,
+                              max_length: defaults.max_length,
                               shapes: { slim: true, athletic: true, heavy: false }
                             };
                           });
@@ -2322,7 +2683,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                     </div>
 
                                     {cell.enabled ? (
-                                      <div className="flex-1 grid sm:grid-cols-3 gap-6">
+                                      <div className="flex-1 grid grid-cols-1 gap-4">
+                                        <div className="grid sm:grid-cols-3 gap-6">
                                         {/* Height */}
                                         <div className="space-y-1.5">
                                           <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "قد مناسب (سانتی‌متر):" : "Height Range (cm):"}</span>
@@ -2404,6 +2766,143 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                             </label>
                                           </div>
                                         </div>
+
+                                        </div>
+
+                                        {/* Precise clothing body-part measurements */}
+                                        <div className="border-t border-white/5 pt-3 mt-1 grid grid-cols-2 md:grid-cols-6 gap-3">
+                                          {/* Chest */}
+                                          <div className="space-y-1">
+                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور سینه:" : "Chest:"}</span>
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                type="number"
+                                                placeholder="Min"
+                                                value={cell.min_chest ?? ''}
+                                                onChange={(e) => handleTplCellChange('min_chest', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                              <span className="text-neutral-500 text-[10px]">-</span>
+                                              <input
+                                                type="number"
+                                                placeholder="Max"
+                                                value={cell.max_chest ?? ''}
+                                                onChange={(e) => handleTplCellChange('max_chest', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          {/* Waist */}
+                                          <div className="space-y-1">
+                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور کمر:" : "Waist:"}</span>
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                type="number"
+                                                placeholder="Min"
+                                                value={cell.min_waist ?? ''}
+                                                onChange={(e) => handleTplCellChange('min_waist', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                              <span className="text-neutral-500 text-[10px]">-</span>
+                                              <input
+                                                type="number"
+                                                placeholder="Max"
+                                                value={cell.max_waist ?? ''}
+                                                onChange={(e) => handleTplCellChange('max_waist', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          {/* Hip */}
+                                          <div className="space-y-1">
+                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور باسن:" : "Hips:"}</span>
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                type="number"
+                                                placeholder="Min"
+                                                value={cell.min_hip ?? ''}
+                                                onChange={(e) => handleTplCellChange('min_hip', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                              <span className="text-neutral-500 text-[10px]">-</span>
+                                              <input
+                                                type="number"
+                                                placeholder="Max"
+                                                value={cell.max_hip ?? ''}
+                                                onChange={(e) => handleTplCellChange('max_hip', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          {/* Shoulder */}
+                                          <div className="space-y-1">
+                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "سرشانه:" : "Shoulder:"}</span>
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                type="number"
+                                                placeholder="Min"
+                                                value={cell.min_shoulder ?? ''}
+                                                onChange={(e) => handleTplCellChange('min_shoulder', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                              <span className="text-neutral-500 text-[10px]">-</span>
+                                              <input
+                                                type="number"
+                                                placeholder="Max"
+                                                value={cell.max_shoulder ?? ''}
+                                                onChange={(e) => handleTplCellChange('max_shoulder', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          {/* Sleeve */}
+                                          <div className="space-y-1">
+                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "قد آستین:" : "Sleeve:"}</span>
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                type="number"
+                                                placeholder="Min"
+                                                value={cell.min_sleeve ?? ''}
+                                                onChange={(e) => handleTplCellChange('min_sleeve', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                              <span className="text-neutral-500 text-[10px]">-</span>
+                                              <input
+                                                type="number"
+                                                placeholder="Max"
+                                                value={cell.max_sleeve ?? ''}
+                                                onChange={(e) => handleTplCellChange('max_sleeve', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          {/* Length */}
+                                          <div className="space-y-1">
+                                            <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "قد لباس:" : "Length:"}</span>
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                type="number"
+                                                placeholder="Min"
+                                                value={cell.min_length ?? ''}
+                                                onChange={(e) => handleTplCellChange('min_length', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                              <span className="text-neutral-500 text-[10px]">-</span>
+                                              <input
+                                                type="number"
+                                                placeholder="Max"
+                                                value={cell.max_length ?? ''}
+                                                onChange={(e) => handleTplCellChange('max_length', null, e.target.value ? Number(e.target.value) : undefined)}
+                                                className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                     ) : (
                                       <div className="flex-1 text-right text-[10px] text-neutral-500 italic">
@@ -2447,6 +2946,18 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                     max_height: Number(val.max_height),
                                     min_weight: Number(val.min_weight),
                                     max_weight: Number(val.max_weight),
+                                    min_chest: val.min_chest !== undefined ? Number(val.min_chest) : undefined,
+                                    max_chest: val.max_chest !== undefined ? Number(val.max_chest) : undefined,
+                                    min_waist: val.min_waist !== undefined ? Number(val.min_waist) : undefined,
+                                    max_waist: val.max_waist !== undefined ? Number(val.max_waist) : undefined,
+                                    min_hip: val.min_hip !== undefined ? Number(val.min_hip) : undefined,
+                                    max_hip: val.max_hip !== undefined ? Number(val.max_hip) : undefined,
+                                    min_shoulder: val.min_shoulder !== undefined ? Number(val.min_shoulder) : undefined,
+                                    max_shoulder: val.max_shoulder !== undefined ? Number(val.max_shoulder) : undefined,
+                                    min_sleeve: val.min_sleeve !== undefined ? Number(val.min_sleeve) : undefined,
+                                    max_sleeve: val.max_sleeve !== undefined ? Number(val.max_sleeve) : undefined,
+                                    min_length: val.min_length !== undefined ? Number(val.min_length) : undefined,
+                                    max_length: val.max_length !== undefined ? Number(val.max_length) : undefined,
                                     shapes: val.shapes
                                   });
                                 }
@@ -2506,12 +3017,25 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                       const formState: Record<string, any> = {};
                                       sizes.forEach(sz => {
                                         const found = tpl.measurements?.find(m => m.size_id === sz.id);
+                                        const defaults = getDefaultMeasurementsForSize(sz.name);
                                         formState[sz.id] = {
                                           enabled: !!found,
-                                          min_height: found ? found.min_height : 150,
-                                          max_height: found ? found.max_height : 180,
-                                          min_weight: found ? found.min_weight : 50,
-                                          max_weight: found ? found.max_weight : 80,
+                                          min_height: found ? found.min_height : defaults.min_height,
+                                          max_height: found ? found.max_height : defaults.max_height,
+                                          min_weight: found ? found.min_weight : defaults.min_weight,
+                                          max_weight: found ? found.max_weight : defaults.max_weight,
+                                          min_chest: found?.min_chest !== undefined ? found.min_chest : defaults.min_chest,
+                                          max_chest: found?.max_chest !== undefined ? found.max_chest : defaults.max_chest,
+                                          min_waist: found?.min_waist !== undefined ? found.min_waist : defaults.min_waist,
+                                          max_waist: found?.max_waist !== undefined ? found.max_waist : defaults.max_waist,
+                                          min_hip: found?.min_hip !== undefined ? found.min_hip : defaults.min_hip,
+                                          max_hip: found?.max_hip !== undefined ? found.max_hip : defaults.max_hip,
+                                          min_shoulder: found?.min_shoulder !== undefined ? found.min_shoulder : defaults.min_shoulder,
+                                          max_shoulder: found?.max_shoulder !== undefined ? found.max_shoulder : defaults.max_shoulder,
+                                          min_sleeve: found?.min_sleeve !== undefined ? found.min_sleeve : defaults.min_sleeve,
+                                          max_sleeve: found?.max_sleeve !== undefined ? found.max_sleeve : defaults.max_sleeve,
+                                          min_length: found?.min_length !== undefined ? found.min_length : defaults.min_length,
+                                          max_length: found?.max_length !== undefined ? found.max_length : defaults.max_length,
                                           shapes: found ? found.shapes : { slim: true, athletic: true, heavy: false }
                                         };
                                       });
