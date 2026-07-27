@@ -525,7 +525,7 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
             <div>
               <span className="font-extrabold text-sm text-neutral-400 block">{isRtl ? "خرید از فروشگاه" : "Buying From"}</span>
               <h1 className="text-sm font-black text-indigo-400 tracking-tight leading-none">
-                {merchant?.shop_name || "SizeGrid Merchant"}
+                {merchant?.shop_name || (isRtl ? "فروشگاه تنخور" : "Tankhor Merchant")}
               </h1>
             </div>
           </div>
@@ -951,7 +951,7 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
 
       {/* FOOTER */}
       <footer className="py-8 border-t border-neutral-800 text-center text-xs text-neutral-400">
-        <p>© 2026 SizeGrid Client Utility. Verified securely for direct customer deployment.</p>
+        <p>© 2026 tankhor.com | تنخور. راهنمای هوشمند سایز و انتخاب متغیر پوشاک.</p>
       </footer>
 
     </div>

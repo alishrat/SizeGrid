@@ -24,7 +24,7 @@ class DirectusService {
 
   constructor() {
     // Rehydrate user session from browser cache
-    const savedUser = localStorage.getItem('sizegrid_user');
+    const savedUser = localStorage.getItem('tankhor_user') || localStorage.getItem('sizegrid_user');
     if (savedUser) {
       try {
         this.user = JSON.parse(savedUser);
@@ -71,7 +71,7 @@ class DirectusService {
     };
 
     this.user = loggedUser;
-    localStorage.setItem('sizegrid_user', JSON.stringify(loggedUser));
+    localStorage.setItem('tankhor_user', JSON.stringify(loggedUser));
     return loggedUser;
   }
 
@@ -102,6 +102,7 @@ class DirectusService {
 
   logout() {
     this.user = null;
+    localStorage.removeItem('tankhor_user');
     localStorage.removeItem('sizegrid_user');
   }
 
@@ -136,7 +137,7 @@ class DirectusService {
     // Update current memory + local storage
     this.user.shop_name = shopName;
     this.user.shop_slug = cleanSlug;
-    localStorage.setItem('sizegrid_user', JSON.stringify(this.user));
+    localStorage.setItem('tankhor_user', JSON.stringify(this.user));
     return this.user;
   }
 
@@ -479,11 +480,16 @@ class DirectusService {
     const currentUser = this.getCurrentUser();
     if (!currentUser) throw new Error("Authentication required.");
 
-    // Extract image UUID if it's a Directus assets link
+    // Extract image UUID if it's a Directus assets link or plain string
     let main_image: string | null = null;
-    if (productData.image && productData.image.includes('/assets/')) {
-      const parts = productData.image.split('/assets/');
-      main_image = parts[parts.length - 1];
+    if (productData.image && typeof productData.image === 'string') {
+      const cleanImg = productData.image.trim();
+      if (cleanImg.includes('/assets/')) {
+        const parts = cleanImg.split('/assets/');
+        main_image = parts[parts.length - 1].split('?')[0];
+      } else if (cleanImg.length > 0) {
+        main_image = cleanImg.split('?')[0];
+      }
     }
 
     // Resolve category_id accurately from categories list
@@ -556,10 +562,17 @@ class DirectusService {
     // Parse image UUID
     let main_image: string | undefined | null = undefined;
     if (productData.image !== undefined) {
-      if (productData.image && productData.image.includes('/assets/')) {
-        const parts = productData.image.split('/assets/');
-        main_image = parts[parts.length - 1];
-      } else if (!productData.image) {
+      if (productData.image && typeof productData.image === 'string') {
+        const cleanImg = productData.image.trim();
+        if (cleanImg.includes('/assets/')) {
+          const parts = cleanImg.split('/assets/');
+          main_image = parts[parts.length - 1].split('?')[0];
+        } else if (cleanImg.length > 0) {
+          main_image = cleanImg.split('?')[0];
+        } else {
+          main_image = null;
+        }
+      } else {
         main_image = null;
       }
     }
@@ -1119,76 +1132,115 @@ class DirectusService {
   }
 
   // --- HTML5 CANVAS IMAGE COMPRESSOR SERVICE ---
-  compressImage(file: File, maxWidth = 800, maxHeight = 800, quality = 0.75): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
+  compressImage(file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.8): Promise<Blob> {
+    return new Promise((resolve) => {
+      if (!file.type || !file.type.startsWith('image/') || file.type.includes('svg')) {
+        resolve(file);
+        return;
+      }
 
-          if (width > height) {
-            if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target?.result as string;
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > maxWidth) {
+                  height = Math.round((height * maxWidth) / width);
+                  width = maxWidth;
+                }
+              } else {
+                if (height > maxHeight) {
+                  width = Math.round((width * maxHeight) / height);
+                  height = maxHeight;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                resolve(file);
+                return;
+              }
+
+              ctx.drawImage(img, 0, 0, width, height);
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  resolve(blob);
+                } else {
+                  resolve(file);
+                }
+              }, 'image/jpeg', quality);
+            } catch {
+              resolve(file);
             }
-          } else {
-            if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
-              height = maxHeight;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error("Could not acquire 2D context."));
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob((blob) => {
-            if (blob) {
-              resolve(blob);
-            } else {
-              reject(new Error("Canvas blob compression failed."));
-            }
-          }, 'image/jpeg', quality);
+          };
+          img.onerror = () => resolve(file);
         };
-        img.onerror = (err) => reject(err);
-      };
-      reader.onerror = (err) => reject(err);
+        reader.onerror = () => resolve(file);
+      } catch {
+        resolve(file);
+      }
     });
   }
 
   async uploadProductImage(file: File): Promise<string> {
-    const compressedBlob = await this.compressImage(file);
-    const compressedFile = new File([compressedBlob], "compressed_" + file.name, { type: 'image/jpeg' });
-
     const currentUser = this.getCurrentUser();
-    if (!currentUser?.token) throw new Error("Authentication token missing.");
+    if (!currentUser?.token) {
+      throw new Error("نشست کاربری شما معتبر نیست یا توکن دریافت نشده است. لطفاً دوباره وارد شوید.");
+    }
+
+    let uploadBlob: Blob = file;
+    try {
+      uploadBlob = await this.compressImage(file);
+    } catch (e) {
+      console.warn("Canvas compression skipped, using original file:", e);
+    }
+
+    const compressedFile = new File([uploadBlob], file.name || "product_image.jpg", { type: uploadBlob.type || file.type || 'image/jpeg' });
 
     const formData = new FormData();
     formData.append('file', compressedFile);
 
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${currentUser.token}`
+    };
+
     const response = await fetch(`${DIRECTUS_URL}/files`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${currentUser.token}` },
+      headers,
       body: formData
     });
 
     if (!response.ok) {
-      throw new Error("آپلود تصویر در سرور دایرکتوس با خطا مواجه شد.");
+      let errMsg = `خطای سرور (${response.status})`;
+      try {
+        const errJson = await response.json();
+        if (errJson?.errors?.[0]?.message) {
+          errMsg = errJson.errors[0].message;
+        }
+      } catch {
+        // ignore fallback
+      }
+      throw new Error(`خطا در آپلود تصویر در دیتابیس: ${errMsg}`);
     }
 
     const data = await response.json();
-    return `${DIRECTUS_URL}/assets/${data?.data?.id}`;
+    const fileId = data?.data?.id;
+    if (!fileId) {
+      throw new Error("شناسه تصویر پس از آپلود بازگردانده نشد.");
+    }
+
+    return `${DIRECTUS_URL}/assets/${fileId}`;
   }
 
   // --- PUBLIC STOREFRONT QUERY APIS ---

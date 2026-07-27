@@ -203,7 +203,7 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
 
   const handleDemoFill = () => {
     // Fill quick registration details for easy testing
-    setEmail('demo@sizegrid.ir');
+    setEmail('demo@tankhor.com');
     setPassword('demo1234');
     setShopName('گالری لباس شیراز');
     setShopSlug('shiraz-gallery');
@@ -851,7 +851,7 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
 
       {/* FOOTER */}
       <footer className="py-8 px-6 border-t border-neutral-800 text-center text-xs text-neutral-400">
-        <p>© 2026 SizeGrid App. {isRtl ? "طراحی شده برای زیرساخت Coolify" : "Engineered for Coolify PaaS deployments with Docker."}</p>
+        <p>© 2026 tankhor.com | تنخور. {isRtl ? "پلتفرم تخصصی راهنمای سایز و مدیریت ماتریسی پوشاک" : "Fashion Sizing & Inventory Platform"}</p>
       </footer>
 
     </div>

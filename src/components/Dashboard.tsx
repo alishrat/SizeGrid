@@ -34,7 +34,8 @@ import {
   Warehouse,
   CheckCircle2,
   RefreshCw,
-  Ruler
+  Ruler,
+  Loader2
 } from 'lucide-react';
 
 const getDefaultMeasurementsForSize = (sizeName: string) => {
@@ -1086,7 +1087,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             </div>
             <div>
               <h1 className="font-extrabold text-sm tracking-wide bg-gradient-to-r from-sky-400 to-indigo-500 bg-clip-text text-transparent">
-                SizeGrid Panel
+                پنل مدیریت تنخور (tankhor.com)
               </h1>
               <p className="text-[10px] text-neutral-500 font-bold">{t.store_settings}</p>
             </div>
@@ -1697,7 +1698,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                             <div>
                               <label className="block text-xs font-bold mb-1.5 text-neutral-400">
-                                {isRtl ? "تصویر کالا (آپلود فشرده با کانواس)" : "Product Image (Direct Canvas Compress & Upload)"}
+                                {isRtl ? "تصویر کالا (آپلود تصویر یا آدرس مستقیم)" : "Product Image (Upload or Direct URL)"}
                               </label>
                               
                               <div className="space-y-3">
@@ -1716,35 +1717,60 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                     </div>
                                   </div>
                                 ) : (
-                                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-800 hover:border-sky-500/50 bg-neutral-950/20 hover:bg-sky-500/5 rounded-xl p-6 transition-all cursor-pointer text-center group">
-                                    <Upload className="w-8 h-8 text-neutral-500 group-hover:text-sky-400 group-hover:scale-110 transition-all mb-2" />
-                                    <span className="text-xs font-extrabold text-neutral-300 group-hover:text-sky-400">
-                                      {isRtl ? "انتخاب تصویر برای فشرده‌سازی و آپلود" : "Click to Compress & Upload Image"}
-                                    </span>
-                                    <span className="text-[10px] text-neutral-500 mt-1 leading-relaxed">
-                                      {isRtl ? "تصویر با استفاده از کانواس در مرورگر فشرده و سپس آپلود می‌شود" : "Compressed in-browser via canvas for fast uploads"}
-                                    </span>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          try {
-                                            setProdFormStatus('saving');
-                                            setError('');
-                                            const url = await DirectusAPI.uploadProductImage(file);
-                                            setProdFormImage(url);
-                                          } catch (err: any) {
-                                            setError(isRtl ? "خطا در آپلود تصویر" : "Error uploading image: " + err.message);
-                                          } finally {
-                                            setProdFormStatus('idle');
+                                  <div className="space-y-2">
+                                    <label className={`flex flex-col items-center justify-center border-2 border-dashed ${prodFormStatus === 'saving' ? 'border-sky-500 bg-sky-500/10' : 'border-neutral-800 hover:border-sky-500/50 bg-neutral-950/20 hover:bg-sky-500/5'} rounded-xl p-5 transition-all cursor-pointer text-center group`}>
+                                      {prodFormStatus === 'saving' ? (
+                                        <div className="flex flex-col items-center gap-2 py-2">
+                                          <Loader2 className="w-7 h-7 text-sky-400 animate-spin" />
+                                          <span className="text-xs font-bold text-sky-400">
+                                            {isRtl ? "در حال فشرده‌سازی و آپلود..." : "Compressing & Uploading..."}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <Upload className="w-7 h-7 text-neutral-500 group-hover:text-sky-400 group-hover:scale-110 transition-all mb-1.5" />
+                                          <span className="text-xs font-extrabold text-neutral-300 group-hover:text-sky-400">
+                                            {isRtl ? "انتخاب تصویر برای فشرده‌سازی و آپلود" : "Click to Compress & Upload Image"}
+                                          </span>
+                                          <span className="text-[10px] text-neutral-500 mt-1 leading-relaxed">
+                                            {isRtl ? "تصویر به‌صورت خودکار فشرده و در دیتابیس آپلود می‌شود" : "Compressed in-browser via canvas for fast uploads"}
+                                          </span>
+                                        </>
+                                      )}
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={prodFormStatus === 'saving'}
+                                        className="hidden"
+                                        onChange={async (e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            try {
+                                              setProdFormStatus('saving');
+                                              setError('');
+                                              const url = await DirectusAPI.uploadProductImage(file);
+                                              setProdFormImage(url);
+                                            } catch (err: any) {
+                                              setError(err.message || (isRtl ? "خطا در آپلود تصویر" : "Error uploading image"));
+                                            } finally {
+                                              setProdFormStatus('idle');
+                                              e.target.value = '';
+                                            }
                                           }
-                                        }
-                                      }}
-                                    />
-                                  </label>
+                                        }}
+                                      />
+                                    </label>
+
+                                    <div className="relative flex items-center gap-2 pt-1">
+                                      <input
+                                        type="url"
+                                        placeholder={isRtl ? "یا آدرس لینک مستقیم تصویر را وارد کنید (https://...)" : "Or paste image URL (https://...)"}
+                                        value={prodFormImage}
+                                        onChange={(e) => setProdFormImage(e.target.value)}
+                                        className={`w-full px-3 py-1.5 rounded-lg text-xs border focus:outline-none focus:ring-1 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950 border-neutral-800 text-white placeholder-neutral-600' : 'bg-neutral-50 border-neutral-200 text-neutral-900 placeholder-neutral-400'}`}
+                                      />
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             </div>
