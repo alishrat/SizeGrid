@@ -3,24 +3,11 @@ import { RouterProvider, Route } from './components/Router';
 import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import Storefront from './components/Storefront';
+import { I18nProvider, useTranslation } from './i18n';
 
-export default function App() {
-  const [lang, setLang] = useState<'fa' | 'en'>('fa');
+function AppContent() {
+  const { lang, setLang } = useTranslation();
   const [darkMode, setDarkMode] = useState<boolean>(true);
-
-  // Synchronize document dir direction attribute and HTML body font styles
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute('dir', lang === 'fa' ? 'rtl' : 'ltr');
-    root.setAttribute('lang', lang);
-    
-    // Set appropriate font family
-    if (lang === 'fa') {
-      root.style.fontFamily = '"Inter", system-ui, sans-serif';
-    } else {
-      root.style.fontFamily = '"Inter", sans-serif';
-    }
-  }, [lang]);
 
   // Synchronize dark class on document element
   useEffect(() => {
@@ -75,5 +62,13 @@ export default function App() {
         } 
       />
     </RouterProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   );
 }

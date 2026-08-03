@@ -209,6 +209,7 @@ class DirectusService {
       8: 'one_piece',
       9: 'accessories'
     };
+    let categoriesList: Category[] = [];
     try {
       const currentUser = this.getCurrentUser();
       const headers: Record<string, string> = {};
@@ -219,7 +220,7 @@ class DirectusService {
       if (response.ok) {
         const res = await response.json();
         if (res?.data && res.data.length > 0) {
-          return res.data.map((c: any) => {
+          categoriesList = res.data.map((c: any) => {
             const sysType = Number(c.system_type || c.id) || 1;
             return {
               id: c.id,
@@ -236,23 +237,49 @@ class DirectusService {
     } catch (e) {
       console.warn("Could not query categories, using defaults", e);
     }
-    return [
-      { id: 1, name: "تیشرت، پیراهن و هودی (بالاتنه)", name_fa: "تیشرت، پیراهن و هودی (بالاتنه)", slug: "tops", system_type: 1, clothing_type_slug: 'tops' },
-      { id: 2, name: "شلوار، جین و شلوارک (پایین‌تنه)", name_fa: "شلوار، جین و شلوارک (پایین‌تنه)", slug: "bottoms", system_type: 2, clothing_type_slug: 'bottoms' },
-      { id: 7, name: "کفش و کتانی (کفش)", name_fa: "کفش و کتانی (کفش)", slug: "footwear", system_type: 7, clothing_type_slug: 'footwear' },
-      { id: 8, name: "سرهمی و اورال (سرهمی)", name_fa: "سرهمی و اورال (سرهمی)", slug: "one_piece", system_type: 8, clothing_type_slug: 'one_piece' },
-      { id: 9, name: "کلاه، کیف و اکسسوری", name_fa: "کلاه، کیف و اکسسوری", slug: "accessories", system_type: 9, clothing_type_slug: 'accessories' }
-    ];
+
+    if (categoriesList.length === 0) {
+      categoriesList = [
+        { id: 1, name: "تیشرت، پیراهن و هودی (بالاتنه)", name_fa: "تیشرت، پیراهن و هودی (بالاتنه)", slug: "tops", system_type: 1, clothing_type_slug: 'tops' },
+        { id: 2, name: "شلوار، جین و شلوارک (پایین‌تنه)", name_fa: "شلوار، جین و شلوارک (پایین‌تنه)", slug: "bottoms", system_type: 2, clothing_type_slug: 'bottoms' },
+        { id: 7, name: "کفش و کتانی (کفش)", name_fa: "کفش و کتانی (کفش)", slug: "footwear", system_type: 7, clothing_type_slug: 'footwear' },
+        { id: 8, name: "سرهمی و اورال (سرهمی)", name_fa: "سرهمی و اورال (سرهمی)", slug: "one_piece", system_type: 8, clothing_type_slug: 'one_piece' },
+        { id: 9, name: "کلاه، کیف و اکسسوری", name_fa: "کلاه، کیف و اکسسوری", slug: "accessories", system_type: 9, clothing_type_slug: 'accessories' }
+      ];
+    }
+
+    const currentUser = this.getCurrentUser();
+    if (currentUser) {
+      const localCatsStr = localStorage.getItem(`custom_categories_${currentUser.id}`) || '[]';
+      try {
+        const localCats = JSON.parse(localCatsStr);
+        localCats.forEach((lc: Category) => {
+          if (!categoriesList.some(c => c.id === lc.id || c.name === lc.name)) {
+            categoriesList.push(lc);
+          }
+        });
+      } catch (e) {}
+    }
+
+    return categoriesList;
   }
 
-  async createCategory(name: string, system_type: number): Promise<Category> {
+  async createCategory(name: string, system_type: number, clothing_type_slug?: ClothingTypeSlug): Promise<Category> {
     const currentUser = this.getCurrentUser();
+    const systemTypeToSlug: Record<number, ClothingTypeSlug> = {
+      1: 'tops', 2: 'bottoms', 3: 'footwear', 4: 'one_piece', 5: 'accessories',
+      7: 'footwear', 8: 'one_piece', 9: 'accessories'
+    };
+    const resolvedSlug = clothing_type_slug || systemTypeToSlug[system_type] || 'tops';
     const payload = {
       name,
       slug: name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
       system_type,
+      clothing_type_slug: resolvedSlug,
       user_id: currentUser?.id || null
     };
+
+    let newCat: Category | null = null;
     try {
       if (currentUser?.token) {
         const response = await fetch(`${DIRECTUS_URL}/items/categories`, {
@@ -265,12 +292,13 @@ class DirectusService {
         });
         if (response.ok) {
           const res = await response.json();
-          return {
+          newCat = {
             id: res.data.id,
             name: res.data.name,
             name_fa: res.data.name,
             slug: res.data.slug,
             system_type: res.data.system_type,
+            clothing_type_slug: resolvedSlug,
             user_id: res.data.user_id
           };
         }
@@ -278,12 +306,46 @@ class DirectusService {
     } catch (e) {
       console.warn("Directus category creation error", e);
     }
-    return {
-      id: Math.floor(Math.random() * 1000) + 100,
-      name,
-      name_fa: name,
-      system_type
-    };
+
+    if (!newCat) {
+      newCat = {
+        id: Math.floor(Math.random() * 1000) + 100,
+        name,
+        name_fa: name,
+        system_type,
+        clothing_type_slug: resolvedSlug,
+        user_id: currentUser?.id || null
+      };
+    }
+
+    if (currentUser) {
+      const localCatsStr = localStorage.getItem(`custom_categories_${currentUser.id}`) || '[]';
+      try {
+        const localCats = JSON.parse(localCatsStr);
+        localCats.push(newCat);
+        localStorage.setItem(`custom_categories_${currentUser.id}`, JSON.stringify(localCats));
+      } catch (e) {}
+    }
+
+    return newCat;
+  }
+
+  async deleteCategory(id: number): Promise<void> {
+    const currentUser = this.getCurrentUser();
+    if (currentUser?.token) {
+      await fetch(`${DIRECTUS_URL}/items/categories/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${currentUser.token}` }
+      }).catch(() => {});
+    }
+    if (currentUser) {
+      const localCatsStr = localStorage.getItem(`custom_categories_${currentUser.id}`) || '[]';
+      try {
+        const localCats = JSON.parse(localCatsStr);
+        const filtered = localCats.filter((c: Category) => c.id !== id);
+        localStorage.setItem(`custom_categories_${currentUser.id}`, JSON.stringify(filtered));
+      } catch (e) {}
+    }
   }
 
   async getSizes(): Promise<Size[]> {
@@ -1282,16 +1344,21 @@ class DirectusService {
 
       const catObj = categories.find(c => c.id === rawProduct.category_id);
       let clothingTypeSlug: ClothingTypeSlug = 'tops';
-      if (catObj?.system_type) {
-        const ct = clothingTypes.find(t => t.id === catObj.system_type);
-        if (ct?.slug) clothingTypeSlug = ct.slug;
+      if (catObj?.clothing_type_slug) {
+        clothingTypeSlug = catObj.clothing_type_slug;
+      } else if (catObj?.system_type) {
+        const sysMap: Record<number, ClothingTypeSlug> = {
+          1: 'tops', 2: 'bottoms', 3: 'footwear', 4: 'one_piece', 5: 'accessories',
+          7: 'footwear', 8: 'one_piece', 9: 'accessories'
+        };
+        clothingTypeSlug = sysMap[catObj.system_type] || 'tops';
       } else if (rawProduct.category_id === 2) {
         clothingTypeSlug = 'bottoms';
-      } else if (rawProduct.category_id === 3) {
+      } else if (rawProduct.category_id === 3 || rawProduct.category_id === 7) {
         clothingTypeSlug = 'footwear';
-      } else if (rawProduct.category_id === 4) {
+      } else if (rawProduct.category_id === 4 || rawProduct.category_id === 8) {
         clothingTypeSlug = 'one_piece';
-      } else if (rawProduct.category_id === 5) {
+      } else if (rawProduct.category_id === 5 || rawProduct.category_id === 9) {
         clothingTypeSlug = 'accessories';
       }
 

@@ -183,7 +183,7 @@ interface DashboardProps {
   setDarkMode: (val: boolean) => void;
 }
 
-type ActiveTab = 'products' | 'warehouse' | 'compressor' | 'settings' | 'templates' | 'sizes';
+type ActiveTab = 'products' | 'warehouse' | 'categories' | 'templates' | 'sizes' | 'compressor' | 'settings';
 type EditSubTab = 'general' | 'guides' | 'matrix';
 
 export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: DashboardProps) {
@@ -309,6 +309,53 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
   // Dynamic categories list
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
+
+  // Category management state
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatSystemType, setNewCatSystemType] = useState<number>(1);
+  const [newCatClothingTypeSlug, setNewCatClothingTypeSlug] = useState<ClothingTypeSlug>('tops');
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+
+  const handleCreateCategory = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newCatName.trim()) {
+      setError(isRtl ? "نام دسته‌بندی الزامی است." : "Category name is required.");
+      return;
+    }
+    setCreatingCategory(true);
+    setError('');
+    setSuccess('');
+    try {
+      const created = await DirectusAPI.createCategory(newCatName.trim(), Number(newCatSystemType), newCatClothingTypeSlug);
+      setSuccess(isRtl ? "دسته‌بندی جدید با موفقیت اضافه شد." : "New category added successfully.");
+      setNewCatName('');
+      setShowAddCategoryModal(false);
+      const cats = await DirectusAPI.getCategories();
+      setCategoriesList(cats);
+      setProdFormCategory(created.name);
+      setTimeout(() => setSuccess(''), 3500);
+    } catch (err: any) {
+      setError(err?.message || "Error creating category.");
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: number, name: string) => {
+    if (!confirm(isRtl ? `آیا از حذف دسته‌بندی "${name}" اطمینان دارید؟` : `Are you sure you want to delete category "${name}"?`)) return;
+    setError('');
+    setSuccess('');
+    try {
+      await DirectusAPI.deleteCategory(id);
+      setSuccess(isRtl ? "دسته‌بندی با موفقیت حذف شد." : "Category deleted successfully.");
+      const cats = await DirectusAPI.getCategories();
+      setCategoriesList(cats);
+      setTimeout(() => setSuccess(''), 3500);
+    } catch (err: any) {
+      setError(err?.message || "Error deleting category.");
+    }
+  };
 
   // Products listing UX states
   const [productSearch, setProductSearch] = useState('');
@@ -1119,7 +1166,15 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'warehouse' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
             >
               <Warehouse className="w-4 h-4" />
-              <span>{isRtl ? "انبار و موجودی" : "Warehouse & Stock"}</span>
+              <span>{isRtl ? "موجودی انبار" : "Warehouse Stock"}</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('categories'); setIsEditingProd(null); }}
+              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'categories' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>{isRtl ? "مدیریت دسته‌بندی" : "Category Manager"}</span>
             </button>
 
             <button
@@ -1127,7 +1182,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'templates' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
             >
               <Ruler className="w-4 h-4" />
-              <span>{isRtl ? "قالب‌های سایزبندی" : "Size Guide Templates"}</span>
+              <span>{isRtl ? "قالب‌های سایزبندی" : "Size Templates"}</span>
             </button>
 
             <button
@@ -1143,7 +1198,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'compressor' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
             >
               <FileImage className="w-4 h-4" />
-              <span>{t.image_compressor}</span>
+              <span>{isRtl ? "فشرده‌سازی تصویر" : "Image Compressor"}</span>
             </button>
 
             <button
@@ -1151,7 +1206,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'settings' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
             >
               <Settings className="w-4 h-4" />
-              <span>{t.store_settings}</span>
+              <span>{isRtl ? "تنظیمات فروشگاه" : "Store Settings"}</span>
             </button>
           </nav>
         </div>
@@ -1167,7 +1222,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             >
               <div className="flex items-center gap-2">
                 <Compass className="w-3.5 h-3.5" />
-                <span>{isRtl ? "فروشگاه عمومی شما" : "My Public Shop"}</span>
+                <span>{isRtl ? "فروشگاه عمومی" : "Public Shop"}</span>
               </div>
               <ChevronLeft className="w-3 h-3" />
             </a>
@@ -1178,7 +1233,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             className="w-full py-2 px-4 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-all"
           >
             <LogOut className="w-4 h-4" />
-            <span>{t.logout}</span>
+            <span>{isRtl ? "خروج حساب" : "Sign Out"}</span>
           </button>
         </div>
       </aside>
@@ -1674,7 +1729,17 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             </div>
 
                             <div>
-                              <label className="block text-xs font-bold mb-1.5 text-neutral-400">{t.category}</label>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-bold text-neutral-400">{t.category}</label>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAddCategoryModal(true)}
+                                  className="text-[10px] font-extrabold text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>{isRtl ? "افزودن دسته‌بندی جدید" : "Add New Category"}</span>
+                                </button>
+                              </div>
                               <select
                                 value={prodFormCategory}
                                 onChange={(e) => setProdFormCategory(e.target.value)}
@@ -1682,7 +1747,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                               >
                                 {categoriesList.map(cat => (
                                   <option key={cat.id} value={cat.name}>
-                                    {isRtl ? (cat.name_fa || cat.name) : cat.name}
+                                    {isRtl ? (cat.name_fa || cat.name) : cat.name} ({cat.clothing_type_slug || 'tops'})
                                   </option>
                                 ))}
                                 {categoriesList.length === 0 && (
@@ -3303,7 +3368,130 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                 </div>
               )}
 
-              {/* TAB 3: CLIENT-SIDE IMAGE COMPRESSOR */}
+              {/* TAB: CATEGORY MANAGEMENT */}
+              {activeTab === 'categories' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-black">{isRtl ? "مدیریت دسته‌بندی‌های کالا" : "Category Management"}</h3>
+                    <p className="text-xs text-neutral-400">
+                      {isRtl 
+                        ? "دسته‌بندی‌های کالاها را مدیریت کنید و مشخص کنید هر دسته چه نوع فرم راهنمای سایز هوشمند (کفش، بالاتنه، پایین‌تنه یا اکسسوری) را بارگذاری کند." 
+                        : "Manage product categories and assign smart size guide types (footwear, tops, bottoms, accessories)."}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-6 lg:grid-cols-12">
+                    {/* Add Category Form */}
+                    <div className="lg:col-span-5 bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
+                      <h4 className="text-sm font-extrabold text-sky-400 flex items-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        <span>{isRtl ? "ایجاد دسته‌بندی جدید" : "Create New Category"}</span>
+                      </h4>
+
+                      <form onSubmit={handleCreateCategory} className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                            {isRtl ? "نام دسته‌بندی (مثال: کفش ورزشی یا شلوار جین):" : "Category Name (e.g. Sneakers or Denim):"}
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder={isRtl ? "مثال: کفش و کتانی" : "e.g. Footwear"}
+                            value={newCatName}
+                            onChange={(e) => setNewCatName(e.target.value)}
+                            className="w-full px-3 py-2 bg-neutral-950/80 border border-white/10 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                            {isRtl ? "نوع ساختار پوشاک (تنظیم فرم راهنمای سایز):" : "Clothing Structure Type (Determines Size Guide Inputs):"}
+                          </label>
+                          <select
+                            value={newCatClothingTypeSlug}
+                            onChange={(e) => {
+                              const slug = e.target.value as ClothingTypeSlug;
+                              setNewCatClothingTypeSlug(slug);
+                              if (slug === 'footwear') setNewCatSystemType(5);
+                              else if (slug === 'bottoms') setNewCatSystemType(2);
+                              else if (slug === 'one_piece') setNewCatSystemType(3);
+                              else if (slug === 'accessories') setNewCatSystemType(4);
+                              else setNewCatSystemType(1);
+                            }}
+                            className="w-full px-3 py-2 bg-neutral-950/80 border border-white/10 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          >
+                            <option value="tops">{isRtl ? "بالاتنه (تیشرت، هودی، پیراهن، کت، کاپشن)" : "Tops (T-Shirts, Hoodies, Shirts, Jackets)"}</option>
+                            <option value="bottoms">{isRtl ? "پایین‌تنه (شلوار، شورت، دامن)" : "Bottoms (Pants, Shorts, Skirts)"}</option>
+                            <option value="footwear">{isRtl ? "کفش و پاپوش (کتانی، صندل، بوت)" : "Footwear (Sneakers, Boots, Sandals)"}</option>
+                            <option value="one_piece">{isRtl ? "سرهمی و پیراهن یکسره (دریس، اورال)" : "One-Piece (Dresses, Jumpsuits)"}</option>
+                            <option value="accessories">{isRtl ? "اکسسوری و لوازم جانبی (کیف، کلاه، کمربند)" : "Accessories (Bags, Hats, Belts)"}</option>
+                          </select>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={creatingCategory}
+                          className="w-full py-2.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+                        >
+                          {creatingCategory ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              <span>{isRtl ? "ثبت دسته‌بندی جدید" : "Save Category"}</span>
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* Existing Categories List */}
+                    <div className="lg:col-span-7 bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                        <h4 className="text-xs font-black text-neutral-400">
+                          {isRtl ? "دسته‌بندی‌های فعال سیستم" : "Active Categories"}
+                        </h4>
+                        <span className="text-[10px] bg-sky-500/10 text-sky-400 font-extrabold px-2.5 py-0.5 rounded-full border border-sky-500/20">
+                          {categoriesList.length} {isRtl ? "دسته‌بندی" : "Categories"}
+                        </span>
+                      </div>
+
+                      <div className="grid gap-2.5">
+                        {categoriesList.map(cat => (
+                          <div key={cat.id} className="flex items-center justify-between p-3 bg-neutral-950/50 border border-white/5 rounded-xl hover:border-white/10 transition-all">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center">
+                                <Layers className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-extrabold text-neutral-200">{isRtl ? (cat.name_fa || cat.name) : cat.name}</p>
+                                <span className="text-[9px] font-extrabold text-indigo-400 px-1.5 py-0.2 bg-indigo-500/10 rounded border border-indigo-500/20 inline-block mt-0.5">
+                                  {cat.clothing_type_slug === 'footwear' ? (isRtl ? 'کفش و پاپوش' : 'Footwear') :
+                                   cat.clothing_type_slug === 'bottoms' ? (isRtl ? 'پایین‌تنه' : 'Bottoms') :
+                                   cat.clothing_type_slug === 'one_piece' ? (isRtl ? 'سرهمی' : 'One-Piece') :
+                                   cat.clothing_type_slug === 'accessories' ? (isRtl ? 'اکسسوری' : 'Accessories') :
+                                   (isRtl ? 'بالاتنه' : 'Tops')}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            {cat.created_by_user && (
+                              <button
+                                onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-all cursor-pointer"
+                                title={isRtl ? "حذف دسته‌بندی" : "Delete category"}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {activeTab === 'compressor' && (
                 <div className={`p-6 rounded-2xl border space-y-6 ${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                   <div>
@@ -3604,6 +3792,88 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
         </div>
       </main>
+
+      {/* QUICK ADD CATEGORY MODAL */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <h3 className="text-sm font-black text-sky-400 flex items-center gap-2">
+                <Layers className="w-4 h-4" />
+                <span>{isRtl ? "افزودن دسته‌بندی جدید" : "Add New Category"}</span>
+              </h3>
+              <button
+                onClick={() => setShowAddCategoryModal(false)}
+                className="p-1 text-neutral-400 hover:text-white rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCategory} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                  {isRtl ? "نام دسته‌بندی (مثال: کفش ورزشی یا شلوار جین):" : "Category Name (e.g. Sneakers or Denim):"}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={isRtl ? "مثال: کفش و کتانی" : "e.g. Footwear"}
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                  {isRtl ? "نوع ساختار پوشاک (تنظیم فرم راهنمای سایز):" : "Clothing Structure Type:"}
+                </label>
+                <select
+                  value={newCatClothingTypeSlug}
+                  onChange={(e) => {
+                    const slug = e.target.value as ClothingTypeSlug;
+                    setNewCatClothingTypeSlug(slug);
+                    if (slug === 'footwear') setNewCatSystemType(5);
+                    else if (slug === 'bottoms') setNewCatSystemType(2);
+                    else if (slug === 'one_piece') setNewCatSystemType(3);
+                    else if (slug === 'accessories') setNewCatSystemType(4);
+                    else setNewCatSystemType(1);
+                  }}
+                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  <option value="tops">{isRtl ? "بالاتنه (تیشرت، هودی، پیراهن، کت، کاپشن)" : "Tops (T-Shirts, Hoodies, Shirts, Jackets)"}</option>
+                  <option value="bottoms">{isRtl ? "پایین‌تنه (شلوار، شورت، دامن)" : "Bottoms (Pants, Shorts, Skirts)"}</option>
+                  <option value="footwear">{isRtl ? "کفش و پاپوش (کتانی، صندل، بوت)" : "Footwear (Sneakers, Boots, Sandals)"}</option>
+                  <option value="one_piece">{isRtl ? "سرهمی و پیراهن یکسره (دریس، اورال)" : "One-Piece (Dresses, Jumpsuits)"}</option>
+                  <option value="accessories">{isRtl ? "اکسسوری و لوازم جانبی (کیف، کلاه، کمربند)" : "Accessories (Bags, Hats, Belts)"}</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCategoryModal(false)}
+                  className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold rounded-xl"
+                >
+                  {isRtl ? "انصراف" : "Cancel"}
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingCategory}
+                  className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-black rounded-xl shadow-lg flex items-center gap-1.5"
+                >
+                  {creatingCategory ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <span>{isRtl ? "ثبت و انتخاب" : "Save & Select"}</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

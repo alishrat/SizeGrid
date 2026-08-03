@@ -59,6 +59,8 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
   const [advHip, setAdvHip] = useState<number>(98);
   const [advShoulder, setAdvShoulder] = useState<number>(42);
   const [advFootLength, setAdvFootLength] = useState<number>(26.5);
+  const [advFootWidth, setAdvFootWidth] = useState<'narrow' | 'regular' | 'wide'>('regular');
+  const [showSizeChartModal, setShowSizeChartModal] = useState<boolean>(false);
   const [calculatedRec, setCalculatedRec] = useState<string>('');
   const [calculatedRecTops, setCalculatedRecTops] = useState<string>('');
   const [calculatedRecBottoms, setCalculatedRecBottoms] = useState<string>('');
@@ -66,6 +68,22 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
   const [fitHintBottoms, setFitHintBottoms] = useState<string>('');
   const [advisorMessage, setAdvisorMessage] = useState<string>('');
   const [advisorIsAvailable, setAdvisorIsAvailable] = useState<boolean>(false);
+
+  const getEuShoeEstimate = (cm: number): string => {
+    if (cm <= 22.0) return '35';
+    if (cm <= 22.8) return '36';
+    if (cm <= 23.5) return '37';
+    if (cm <= 24.2) return '38';
+    if (cm <= 25.0) return '39';
+    if (cm <= 25.8) return '40';
+    if (cm <= 26.5) return '41';
+    if (cm <= 27.2) return '42';
+    if (cm <= 28.0) return '43';
+    if (cm <= 28.8) return '44';
+    if (cm <= 29.5) return '45';
+    if (cm <= 30.2) return '46';
+    return '47+';
+  };
 
   useEffect(() => {
     if (!isPrecisionMode) {
@@ -378,6 +396,14 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
     let minFootPenalty = 999999;
     let foundInGuide = false;
 
+    // Adjust effective foot length based on width preference
+    let effectiveFootLength = advFootLength;
+    if (advFootWidth === 'wide') {
+      effectiveFootLength += 0.4;
+    } else if (advFootWidth === 'narrow') {
+      effectiveFootLength -= 0.2;
+    }
+
     sizes.forEach(sz => {
       const guide = sizeGuides.find(g => g.size_id === sz.id);
       if (guide) {
@@ -385,10 +411,10 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
         if (rawMeas && rawMeas.enabled && rawMeas.min_foot_length && rawMeas.max_foot_length) {
           foundInGuide = true;
           let penalty = 0;
-          if (advFootLength < rawMeas.min_foot_length) {
-            penalty += (rawMeas.min_foot_length - advFootLength) * 2;
-          } else if (advFootLength > rawMeas.max_foot_length) {
-            penalty += (advFootLength - rawMeas.max_foot_length) * 5;
+          if (effectiveFootLength < rawMeas.min_foot_length) {
+            penalty += (rawMeas.min_foot_length - effectiveFootLength) * 2;
+          } else if (effectiveFootLength > rawMeas.max_foot_length) {
+            penalty += (effectiveFootLength - rawMeas.max_foot_length) * 5;
           }
           if (penalty < minFootPenalty) {
             minFootPenalty = penalty;
@@ -399,14 +425,14 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
     });
 
     if (!foundInGuide) {
-      if (advFootLength <= 23.5) bestShoeSize = '37';
-      else if (advFootLength <= 24.2) bestShoeSize = '38';
-      else if (advFootLength <= 25.0) bestShoeSize = '39';
-      else if (advFootLength <= 25.8) bestShoeSize = '40';
-      else if (advFootLength <= 26.5) bestShoeSize = '41';
-      else if (advFootLength <= 27.2) bestShoeSize = '42';
-      else if (advFootLength <= 28.0) bestShoeSize = '43';
-      else if (advFootLength <= 28.8) bestShoeSize = '44';
+      if (effectiveFootLength <= 23.5) bestShoeSize = '37';
+      else if (effectiveFootLength <= 24.2) bestShoeSize = '38';
+      else if (effectiveFootLength <= 25.0) bestShoeSize = '39';
+      else if (effectiveFootLength <= 25.8) bestShoeSize = '40';
+      else if (effectiveFootLength <= 26.5) bestShoeSize = '41';
+      else if (effectiveFootLength <= 27.2) bestShoeSize = '42';
+      else if (effectiveFootLength <= 28.0) bestShoeSize = '43';
+      else if (effectiveFootLength <= 28.8) bestShoeSize = '44';
       else bestShoeSize = '45';
     }
 
@@ -425,6 +451,9 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
     let resolvedProductSize = 'M';
     let fitHint = '';
 
+    const widthLabelFa = advFootWidth === 'wide' ? 'پنجه پهن' : advFootWidth === 'narrow' ? 'پنجه باریک' : 'پنجه معمولی';
+    const widthLabelEn = advFootWidth === 'wide' ? 'Wide fit' : advFootWidth === 'narrow' ? 'Narrow fit' : 'Regular fit';
+
     if (clothingType === 'tops') {
       resolvedProductSize = bestTopsSize;
       fitHint = isRtl ? `اندازه دقیق بر اساس دور سینه ${advChest} cm و عرض سرشانه ${advShoulder} cm` : `Calculated for chest ${advChest} cm`;
@@ -433,7 +462,7 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
       fitHint = isRtl ? `اندازه دقیق بر اساس دور کمر ${advWaist} cm و دور باسن ${advHip} cm` : `Calculated for waist ${advWaist} cm`;
     } else if (clothingType === 'footwear') {
       resolvedProductSize = bestShoeSize;
-      fitHint = isRtl ? `بر اساس طول پا ${advFootLength} cm (استاندارد اروپایی EU)` : `Calculated for foot length ${advFootLength} cm`;
+      fitHint = isRtl ? `بر اساس طول پا ${advFootLength} cm (${widthLabelFa})` : `Calculated for foot length ${advFootLength} cm (${widthLabelEn})`;
     } else if (clothingType === 'one_piece') {
       resolvedProductSize = bestOnePieceSize;
       fitHint = isRtl ? `بر اساس قد ${advHeight} cm و فرم کلی بدن` : `Calculated for total height & body shape`;
@@ -721,138 +750,123 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
               {/* OFFLINE CUSTOMER SIZE ADVISOR CLIENT WIDGET */}
               <div className={`p-6 rounded-2xl border shadow-xl bg-gradient-to-tr ${darkMode ? 'from-neutral-900 to-indigo-950/20 border-neutral-800' : 'from-white to-indigo-50/20 border-neutral-200'}`}>
                 
-                <div className="flex items-center gap-2.5 mb-6">
-                  <div className="p-2 bg-indigo-600 rounded-lg text-white">
-                    <Ruler className="w-4 h-4" />
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-indigo-600 rounded-lg text-white">
+                      <Ruler className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold">{t.size_advisor}</h3>
+                      <p className="text-[10px] text-neutral-400 leading-none mt-0.5">
+                        {getClothingTypeSlug(product) === 'footwear' 
+                          ? (isRtl ? "راهنمای تخصصی پیشنهاد سایز کفش و پاپوش" : "Footwear Specific Size Advisor")
+                          : getClothingTypeSlug(product) === 'bottoms'
+                          ? (isRtl ? "راهنمای تخصصی پیشنهاد سایز شلوار" : "Pants & Bottoms Size Advisor")
+                          : (isRtl ? "سیستم هوشمند انطباق سایز پوشاک" : "Intelligent Clothing Sizing Engine")}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold">{t.size_advisor}</h3>
-                    <p className="text-[10px] text-neutral-400 leading-none mt-0.5">{isRtl ? "سیستم هوشمند دو مرحله‌ای برآورد و انطباق سایز" : "Intelligent 2-Tier matching using real-time sync."}</p>
-                  </div>
+
+                  {/* Button to open Category Detailed Size Chart */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSizeChartModal(true)}
+                    className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-all shrink-0 cursor-pointer shadow-sm"
+                  >
+                    <Ruler className="w-3.5 h-3.5" />
+                    <span>{t.view_size_chart}</span>
+                  </button>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-6 items-start">
                   
-                  {/* Slider fields */}
+                  {/* Slider & Input fields based on product category */}
                   <div className="space-y-4 font-vazirmatn">
-                    {/* Toggle Mode */}
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950/20 border border-white/5">
-                      <span className="text-xs font-extrabold text-neutral-300">
-                        {isRtl ? "من اندازه‌های دقیق بدنم را می‌دانم" : "I know my exact measurements"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsPrecisionMode(!isPrecisionMode)}
-                        className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isPrecisionMode ? 'bg-indigo-600' : 'bg-neutral-800'}`}
-                      >
-                        <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isPrecisionMode ? (isRtl ? '-translate-x-5' : 'translate-x-5') : 'translate-x-0'}`} />
-                      </button>
-                    </div>
+                    
+                    {/* CATEGORY 1: FOOTWEAR (کفش) */}
+                    {getClothingTypeSlug(product) === 'footwear' ? (
+                      <div className="space-y-4 p-4 rounded-xl bg-indigo-950/15 border border-indigo-500/20">
+                        <div className="flex items-center gap-2 pb-2 border-b border-indigo-500/20">
+                          <span className="text-lg">👟</span>
+                          <span className="text-xs font-black text-indigo-400">
+                            {isRtl ? "ورودی‌های اختصاصی سایز پا" : "Footwear Measurements"}
+                          </span>
+                        </div>
 
-                    {!isPrecisionMode ? (
-                      /* Tier 1 (Quick Mode) Inputs */
-                      <div className="space-y-4">
+                        {/* Foot Length Slider */}
                         <div>
-                          <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
-                            <span>{t.height_cm}</span>
-                            <span className="text-indigo-400 font-extrabold">{advHeight} cm</span>
+                          <div className="flex justify-between text-xs font-bold text-neutral-300 mb-1">
+                            <span>{t.foot_length_cm}</span>
+                            <span className="text-indigo-400 font-black text-sm">{advFootLength} cm</span>
                           </div>
                           <input
                             type="range"
-                            min="130"
-                            max="220"
-                            value={advHeight}
-                            onChange={(e) => setAdvHeight(Number(e.target.value))}
-                            className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                            min="20.0"
+                            max="32.0"
+                            step="0.1"
+                            value={advFootLength}
+                            onChange={(e) => setAdvFootLength(Number(e.target.value))}
+                            className="w-full h-2.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                           />
                         </div>
 
-                        <div>
-                          <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
-                            <span>{t.weight_kg}</span>
-                            <span className="text-indigo-400 font-extrabold">{advWeight} kg</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="35"
-                            max="140"
-                            value={advWeight}
-                            onChange={(e) => setAdvWeight(Number(e.target.value))}
-                            className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                          />
+                        {/* Live EU Size conversion estimate badge */}
+                        <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[11px] flex justify-between items-center">
+                          <span className="text-neutral-300 font-extrabold">{isRtl ? "معادل برآوردی سایز اروپا:" : "Estimated EU Size:"}</span>
+                          <span className="font-black text-indigo-400 text-sm">EU {getEuShoeEstimate(advFootLength)}</span>
                         </div>
 
+                        {/* Foot Width Selector */}
                         <div>
-                          <label className="block text-xs font-bold text-neutral-400 mb-2">{t.body_shape}</label>
-                          <div className="grid grid-cols-4 gap-1">
+                          <label className="block text-xs font-extrabold text-neutral-300 mb-2">{t.foot_width}</label>
+                          <div className="grid grid-cols-3 gap-1.5">
                             <button
                               type="button"
-                              onClick={() => setAdvShape('slim')}
-                              className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advShape === 'slim' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                              onClick={() => setAdvFootWidth('narrow')}
+                              className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advFootWidth === 'narrow' ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'}`}
                             >
-                              {t.shape_slim}
+                              {t.foot_width_narrow}
                             </button>
                             <button
                               type="button"
-                              onClick={() => setAdvShape('regular')}
-                              className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advShape === 'regular' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                              onClick={() => setAdvFootWidth('regular')}
+                              className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advFootWidth === 'regular' ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'}`}
                             >
-                              {isRtl ? "معمولی" : "Regular"}
+                              {t.foot_width_regular}
                             </button>
                             <button
                               type="button"
-                              onClick={() => setAdvShape('athletic')}
-                              className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advShape === 'athletic' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                              onClick={() => setAdvFootWidth('wide')}
+                              className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advFootWidth === 'wide' ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'}`}
                             >
-                              {t.shape_athletic}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setAdvShape('heavy')}
-                              className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advShape === 'heavy' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
-                            >
-                              {t.shape_heavy}
+                              {t.foot_width_wide}
                             </button>
                           </div>
                         </div>
 
-                        {/* Estimated Dimensions Summary */}
-                        <div className="p-2.5 rounded-lg bg-neutral-950/20 border border-white/5 text-[10px] text-neutral-400 space-y-1">
-                          <p className="font-extrabold text-[11px] text-neutral-300">{isRtl ? "ابعاد تخمینی بدن شما (محاسبه خودکار):" : "Your estimated body dimensions (auto):"}</p>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                            <div>{isRtl ? `دور سینه: ${advChest} سانتی‌متر` : `Chest/Bust: ${advChest} cm`}</div>
-                            <div>{isRtl ? `دور کمر: ${advWaist} سانتی‌متر` : `Waist: ${advWaist} cm`}</div>
-                            <div>{isRtl ? `دور باسن: ${advHip} سانتی‌متر` : `Hips: ${advHip} cm`}</div>
-                            <div>{isRtl ? `عرض سرشانه: ${advShoulder} سانتی‌متر` : `Shoulders: ${advShoulder} cm`}</div>
+                        {/* Measuring Tip */}
+                        <div className="p-3 rounded-xl bg-neutral-900/60 border border-neutral-800 text-[11px] text-neutral-400 flex items-start gap-2.5">
+                          <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-extrabold text-neutral-300 mb-0.5">{t.how_to_measure_foot}</p>
+                            <p className="leading-relaxed">{t.foot_measure_tip}</p>
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      /* Tier 2 (Precision Mode) Inputs */
-                      <div className="space-y-3 p-3 rounded-xl bg-indigo-950/10 border border-indigo-500/10">
-                        <p className="text-[11px] font-extrabold text-indigo-400 mb-2">
-                          {isRtl ? "لطفاً اندازه‌های دقیق دور بدن خود را وارد کنید (سانتی‌متر):" : "Please input your exact body measurements (cm):"}
-                        </p>
-                        
-                        <div>
-                          <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
-                            <span>{isRtl ? "دور سینه" : "Chest / Bust"}</span>
-                            <span className="text-indigo-400 font-extrabold">{advChest} cm</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="70"
-                            max="140"
-                            value={advChest}
-                            onChange={(e) => setAdvChest(Number(e.target.value))}
-                            className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                          />
+                    ) : getClothingTypeSlug(product) === 'bottoms' ? (
+                      /* CATEGORY 2: BOTTOMS (شلوار) */
+                      <div className="space-y-4 p-4 rounded-xl bg-indigo-950/15 border border-indigo-500/20">
+                        <div className="flex items-center gap-2 pb-2 border-b border-indigo-500/20">
+                          <span className="text-lg">👖</span>
+                          <span className="text-xs font-black text-indigo-400">
+                            {isRtl ? "ورودی‌های اختصاصی شلوار و پایین‌تنه" : "Pants & Bottoms Measurements"}
+                          </span>
                         </div>
 
                         <div>
-                          <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
-                            <span>{isRtl ? "دور کمر" : "Waistline"}</span>
-                            <span className="text-indigo-400 font-extrabold">{advWaist} cm</span>
+                          <div className="flex justify-between text-xs font-bold text-neutral-300 mb-1">
+                            <span>{t.waist_cm}</span>
+                            <span className="text-indigo-400 font-black text-sm">{advWaist} cm</span>
                           </div>
                           <input
                             type="range"
@@ -865,9 +879,9 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
                         </div>
 
                         <div>
-                          <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
-                            <span>{isRtl ? "دور باسن" : "Hip Width"}</span>
-                            <span className="text-indigo-400 font-extrabold">{advHip} cm</span>
+                          <div className="flex justify-between text-xs font-bold text-neutral-300 mb-1">
+                            <span>{t.hip_cm}</span>
+                            <span className="text-indigo-400 font-black text-sm">{advHip} cm</span>
                           </div>
                           <input
                             type="range"
@@ -880,20 +894,253 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
                         </div>
 
                         <div>
-                          <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
-                            <span>{isRtl ? "عرض سرشانه" : "Shoulder Width"}</span>
-                            <span className="text-indigo-400 font-extrabold">{advShoulder} cm</span>
+                          <div className="flex justify-between text-xs font-bold text-neutral-300 mb-1">
+                            <span>{t.height_cm}</span>
+                            <span className="text-indigo-400 font-black text-sm">{advHeight} cm</span>
                           </div>
                           <input
                             type="range"
-                            min="30"
-                            max="60"
-                            value={advShoulder}
-                            onChange={(e) => setAdvShoulder(Number(e.target.value))}
+                            min="140"
+                            max="215"
+                            value={advHeight}
+                            onChange={(e) => setAdvHeight(Number(e.target.value))}
                             className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                           />
                         </div>
                       </div>
+                    ) : getClothingTypeSlug(product) === 'accessories' ? (
+                      /* CATEGORY 3: ACCESSORIES (اکسسوری) */
+                      <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20 text-center space-y-2">
+                        <span className="text-2xl block">🧢</span>
+                        <h4 className="font-extrabold text-xs text-indigo-300">{isRtl ? "این کالا فری‌سایز است" : "Free Size Item"}</h4>
+                        <p className="text-[11px] text-neutral-400">{isRtl ? "محصولات این دسته‌بندی تک‌سایز بوده و برای تمام افراد مناسب می‌باشد." : "Accessories have standard universal fit."}</p>
+                      </div>
+                    ) : (
+                      /* CATEGORY 4: TOPS & OTHERS (تیشرت / پیراهن / سرهمی) */
+                      <>
+                        {/* Toggle Mode */}
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-950/20 border border-white/5">
+                          <span className="text-xs font-extrabold text-neutral-300">
+                            {isRtl ? "من اندازه‌های دقیق بدنم را می‌دانم" : "I know my exact measurements"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsPrecisionMode(!isPrecisionMode)}
+                            className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isPrecisionMode ? 'bg-indigo-600' : 'bg-neutral-800'}`}
+                          >
+                            <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isPrecisionMode ? (isRtl ? '-translate-x-5' : 'translate-x-5') : 'translate-x-0'}`} />
+                          </button>
+                        </div>
+
+                        {!isPrecisionMode ? (
+                          /* Tier 1 (Quick Mode) Inputs */
+                          <div className="space-y-4">
+                            <div>
+                              <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                                <span>{t.height_cm}</span>
+                                <span className="text-indigo-400 font-extrabold">{advHeight} cm</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="130"
+                                max="220"
+                                value={advHeight}
+                                onChange={(e) => setAdvHeight(Number(e.target.value))}
+                                className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                              />
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                                <span>{t.weight_kg}</span>
+                                <span className="text-indigo-400 font-extrabold">{advWeight} kg</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="35"
+                                max="140"
+                                value={advWeight}
+                                onChange={(e) => setAdvWeight(Number(e.target.value))}
+                                className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-neutral-400 mb-2">{t.body_shape}</label>
+                              <div className="grid grid-cols-4 gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setAdvShape('slim')}
+                                  className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advShape === 'slim' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                                >
+                                  {t.shape_slim}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setAdvShape('regular')}
+                                  className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advShape === 'regular' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                                >
+                                  {isRtl ? "معمولی" : "Regular"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setAdvShape('athletic')}
+                                  className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advShape === 'athletic' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                                >
+                                  {t.shape_athletic}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setAdvShape('heavy')}
+                                  className={`py-2 px-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${advShape === 'heavy' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                                >
+                                  {t.shape_heavy}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Estimated Dimensions Summary dynamic by Category */}
+                            <div className="p-2.5 rounded-lg bg-neutral-950/20 border border-white/5 text-[10px] text-neutral-400 space-y-1">
+                              <p className="font-extrabold text-[11px] text-neutral-300">{isRtl ? "ابعاد تخمینی مناسب برای شما:" : "Estimated dimensions for your selection:"}</p>
+                              {getClothingTypeSlug(product) === 'footwear' ? (
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                  <div>{isRtl ? `طول پا: ${advFootLength} سانتی‌متر` : `Foot Length: ${advFootLength} cm`}</div>
+                                  <div>{isRtl ? `سایز اروپایی: EU ${getEuShoeEstimate(advFootLength)}` : `EU Shoe Size: EU ${getEuShoeEstimate(advFootLength)}`}</div>
+                                </div>
+                              ) : getClothingTypeSlug(product) === 'bottoms' ? (
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                  <div>{isRtl ? `دور کمر: ${advWaist} سانتی‌متر` : `Waist: ${advWaist} cm`}</div>
+                                  <div>{isRtl ? `دور باسن: ${advHip} سانتی‌متر` : `Hips: ${advHip} cm`}</div>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                  <div>{isRtl ? `دور سینه: ${advChest} سانتی‌متر` : `Chest/Bust: ${advChest} cm`}</div>
+                                  <div>{isRtl ? `عرض سرشانه: ${advShoulder} سانتی‌متر` : `Shoulders: ${advShoulder} cm`}</div>
+                                  <div>{isRtl ? `دور کمر: ${advWaist} سانتی‌متر` : `Waist: ${advWaist} cm`}</div>
+                                  <div>{isRtl ? `قد: ${advHeight} سانتی‌متر` : `Height: ${advHeight} cm`}</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          /* Tier 2 (Precision Mode) Inputs dynamic by Category */
+                          <div className="space-y-3 p-3 rounded-xl bg-indigo-950/10 border border-indigo-500/10">
+                            <p className="text-[11px] font-extrabold text-indigo-400 mb-2">
+                              {getClothingTypeSlug(product) === 'footwear'
+                                ? (isRtl ? "لطفاً طول و فرم دقیق پای خود را وارد کنید:" : "Please input your exact foot measurements:")
+                                : (isRtl ? "لطفاً اندازه‌های دقیق دور بدن خود را وارد کنید (سانتی‌متر):" : "Please input your exact body measurements (cm):")}
+                            </p>
+                            
+                            {getClothingTypeSlug(product) === 'footwear' ? (
+                              <>
+                                <div>
+                                  <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                                    <span>{isRtl ? "طول پا (سانتی‌متر)" : "Foot Length (cm)"}</span>
+                                    <span className="text-indigo-400 font-extrabold">{advFootLength} cm (EU {getEuShoeEstimate(advFootLength)})</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="20"
+                                    max="33"
+                                    step="0.5"
+                                    value={advFootLength}
+                                    onChange={(e) => setAdvFootLength(Number(e.target.value))}
+                                    className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-bold text-neutral-400 mb-1">{isRtl ? "عرض پنجه پا" : "Foot Width"}</label>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setAdvFootWidth('narrow')}
+                                      className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${advFootWidth === 'narrow' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                                    >
+                                      {isRtl ? "باریک" : "Narrow"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setAdvFootWidth('regular')}
+                                      className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${advFootWidth === 'regular' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                                    >
+                                      {isRtl ? "معمولی" : "Regular"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setAdvFootWidth('wide')}
+                                      className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${advFootWidth === 'wide' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 'border-neutral-800 text-neutral-400'}`}
+                                    >
+                                      {isRtl ? "پهن" : "Wide"}
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            ) : getClothingTypeSlug(product) === 'bottoms' ? (
+                              <>
+                                <div>
+                                  <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                                    <span>{isRtl ? "دور کمر" : "Waistline"}</span>
+                                    <span className="text-indigo-400 font-extrabold">{advWaist} cm</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="60"
+                                    max="130"
+                                    value={advWaist}
+                                    onChange={(e) => setAdvWaist(Number(e.target.value))}
+                                    className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                                    <span>{isRtl ? "دور باسن" : "Hip Width"}</span>
+                                    <span className="text-indigo-400 font-extrabold">{advHip} cm</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="70"
+                                    max="140"
+                                    value={advHip}
+                                    onChange={(e) => setAdvHip(Number(e.target.value))}
+                                    className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div>
+                                  <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                                    <span>{isRtl ? "دور سینه" : "Chest / Bust"}</span>
+                                    <span className="text-indigo-400 font-extrabold">{advChest} cm</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="70"
+                                    max="140"
+                                    value={advChest}
+                                    onChange={(e) => setAdvChest(Number(e.target.value))}
+                                    className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="flex justify-between text-xs font-bold text-neutral-400 mb-1">
+                                    <span>{isRtl ? "عرض سرشانه" : "Shoulder Width"}</span>
+                                    <span className="text-indigo-400 font-extrabold">{advShoulder} cm</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="30"
+                                    max="60"
+                                    value={advShoulder}
+                                    onChange={(e) => setAdvShoulder(Number(e.target.value))}
+                                    className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
 
                     <button
@@ -918,7 +1165,7 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
                             {isRtl ? "سایز دقیق پیشنهادی برای این محصول" : "Recommended Size For This Item"}
                           </span>
                           <span className="block text-4xl font-black text-white my-2 tracking-tight">{calculatedRec}</span>
-                          <span className="block text-xs text-indigo-200/80 leading-snug">{fitHintTops}</span>
+                          <span className="block text-xs text-indigo-200/80 leading-snug">{fitHintTops || fitHintBottoms}</span>
                         </div>
 
                         {/* Recommendation details & inventory availability message */}
@@ -948,6 +1195,178 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
         )}
 
       </main>
+
+      {/* CATEGORY SIZE CHART DETAILED MODAL */}
+      {showSizeChartModal && product && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] ${darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-900'}`}>
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-neutral-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-600 rounded-lg text-white">
+                  <Ruler className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm">{t.view_size_chart}</h3>
+                  <p className="text-xs text-neutral-400 font-bold">{isRtl ? product.name_fa : product.name_en} ({product.category})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSizeChartModal(false)}
+                className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Table of size guides */}
+            <div className="p-6 overflow-y-auto space-y-4 font-vazirmatn">
+              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs flex items-center gap-2 font-bold">
+                <Info className="w-4 h-4 shrink-0" />
+                <span>
+                  {isRtl
+                    ? "ابعاد و مشخصات بر اساس جدول رسمی مرجع این محصول و موجودی انبار فروشگاه می‌باشد."
+                    : "Dimensions derived from standard product guidelines and active catalog inventory."}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-neutral-800">
+                <table className="w-full text-xs text-center border-collapse">
+                  <thead>
+                    <tr className="bg-neutral-950/40 border-b border-neutral-800 text-neutral-400 font-extrabold">
+                      <th className="p-3 border-r border-neutral-800">{isRtl ? "نام سایز" : "Size"}</th>
+                      {getClothingTypeSlug(product) === 'footwear' && (
+                        <>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "طول پا (سانتی‌متر)" : "Foot Length (cm)"}</th>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "معادل EU" : "EU Equivalent"}</th>
+                        </>
+                      )}
+                      {getClothingTypeSlug(product) === 'bottoms' && (
+                        <>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "دور کمر (cm)" : "Waist (cm)"}</th>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "دور باسن (cm)" : "Hip (cm)"}</th>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "قد شلوار (cm)" : "Pants Length"}</th>
+                        </>
+                      )}
+                      {getClothingTypeSlug(product) === 'tops' && (
+                        <>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "دور سینه (cm)" : "Chest (cm)"}</th>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "عرض سرشانه (cm)" : "Shoulder (cm)"}</th>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "قد لباس (cm)" : "Length"}</th>
+                        </>
+                      )}
+                      {getClothingTypeSlug(product) === 'one_piece' && (
+                        <>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "دور سینه (cm)" : "Chest (cm)"}</th>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "دور کمر (cm)" : "Waist (cm)"}</th>
+                          <th className="p-3 border-r border-neutral-800">{isRtl ? "قد (cm)" : "Height"}</th>
+                        </>
+                      )}
+                      {getClothingTypeSlug(product) === 'accessories' && (
+                        <th className="p-3 border-r border-neutral-800">{isRtl ? "ابعاد کالا" : "Dimensions"}</th>
+                      )}
+                      <th className="p-3 font-extrabold">{isRtl ? "موجودی انبار" : "Stock"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sizes.map(sz => {
+                      const guide = sizeGuides.find(g => g.size_id === sz.id);
+                      const rawMeas = guide ? (typeof guide.measurements === 'string' ? JSON.parse(guide.measurements) : guide.measurements) : null;
+                      const hasStock = inventory.some(i => i.size_id === sz.id && i.stock > 0);
+                      const type = getClothingTypeSlug(product);
+
+                      return (
+                        <tr key={sz.id} className="border-b border-neutral-800/60 hover:bg-neutral-800/30 transition-colors">
+                          <td className="p-3 border-r border-neutral-800 font-black text-indigo-400">{sz.name}</td>
+                          
+                          {type === 'footwear' && (
+                            <>
+                              <td className="p-3 border-r border-neutral-800 font-extrabold">
+                                {rawMeas?.min_foot_length ? `${rawMeas.min_foot_length} - ${rawMeas.max_foot_length} cm` : `${(21.5 + sz.id * 0.7).toFixed(1)} - ${(22.2 + sz.id * 0.7).toFixed(1)} cm`}
+                              </td>
+                              <td className="p-3 border-r border-neutral-800 text-neutral-300 font-bold">
+                                EU {sz.name}
+                              </td>
+                            </>
+                          )}
+
+                          {type === 'bottoms' && (
+                            <>
+                              <td className="p-3 border-r border-neutral-800 font-extrabold">
+                                {rawMeas?.min_waist ? `${rawMeas.min_waist} - ${rawMeas.max_waist} cm` : '۷۰ - ۸۰ cm'}
+                              </td>
+                              <td className="p-3 border-r border-neutral-800 font-extrabold">
+                                {rawMeas?.min_hip ? `${rawMeas.min_hip} - ${rawMeas.max_hip} cm` : '۹۰ - ۱۰۰ cm'}
+                              </td>
+                              <td className="p-3 border-r border-neutral-800 text-neutral-300">
+                                {rawMeas?.min_length ? `${rawMeas.min_length} - ${rawMeas.max_length} cm` : '۱۰۰ cm'}
+                              </td>
+                            </>
+                          )}
+
+                          {type === 'tops' && (
+                            <>
+                              <td className="p-3 border-r border-neutral-800 font-extrabold">
+                                {rawMeas?.min_chest ? `${rawMeas.min_chest} - ${rawMeas.max_chest} cm` : '۹۰ - ۱۰۰ cm'}
+                              </td>
+                              <td className="p-3 border-r border-neutral-800 font-extrabold">
+                                {rawMeas?.min_shoulder ? `${rawMeas.min_shoulder} - ${rawMeas.max_shoulder} cm` : '۴۲ - ۴۴ cm'}
+                              </td>
+                              <td className="p-3 border-r border-neutral-800 text-neutral-300">
+                                {rawMeas?.min_length ? `${rawMeas.min_length} - ${rawMeas.max_length} cm` : '۷۰ cm'}
+                              </td>
+                            </>
+                          )}
+
+                          {type === 'one_piece' && (
+                            <>
+                              <td className="p-3 border-r border-neutral-800 font-extrabold">
+                                {rawMeas?.min_chest ? `${rawMeas.min_chest} - ${rawMeas.max_chest} cm` : '۸۸ - ۹۸ cm'}
+                              </td>
+                              <td className="p-3 border-r border-neutral-800 font-extrabold">
+                                {rawMeas?.min_waist ? `${rawMeas.min_waist} - ${rawMeas.max_waist} cm` : '۷۰ - ۸۰ cm'}
+                              </td>
+                              <td className="p-3 border-r border-neutral-800 text-neutral-300">
+                                {rawMeas?.min_height ? `${rawMeas.min_height} - ${rawMeas.max_height} cm` : '۱۶۰ - ۱۷۵ cm'}
+                              </td>
+                            </>
+                          )}
+
+                          {type === 'accessories' && (
+                            <td className="p-3 border-r border-neutral-800 text-neutral-300 font-bold">
+                              {isRtl ? "تک‌سایز استاندارد" : "Universal Free Size"}
+                            </td>
+                          )}
+
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${hasStock ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                              {hasStock ? t.in_stock : t.out_of_stock}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-neutral-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowSizeChartModal(false)}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                {isRtl ? "بستن راهنما" : "Close Size Chart"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
       <footer className="py-8 border-t border-neutral-800 text-center text-xs text-neutral-400">
