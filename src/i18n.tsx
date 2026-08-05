@@ -43,6 +43,7 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     root.style.fontFamily = isFa 
       ? '"Vazirmatn", "Inter", system-ui, sans-serif'
       : '"Inter", system-ui, sans-serif';
+    document.title = isFa ? "تن‌خور" : "Tankhor";
   }, [lang]);
 
   const t = (key: string, params?: Record<string, string | number>): string => {

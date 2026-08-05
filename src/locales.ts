@@ -2,11 +2,11 @@ import { LocaleDictionary } from './types';
 
 export const locales: Record<'fa' | 'en', LocaleDictionary> = {
   fa: {
-    brand_name: "تنخور | Tankhor",
+    brand_name: "تن‌خور",
     tagline: "مدیریت ماتریسی موجودی و راهنمای هوشمند سایز پوشاک - tankhor.com",
-    hero_title: "انقلاب در مدیریت سایزبندی و موجودی پوشاک با تنخور",
+    hero_title: "مدیریت هوشمند موجودی وسایزبندی پوشاک با تن‌خور",
     hero_subtitle: "با تنخور (tankhor.com)، پنل دو بعدی مدیریت موجودی را به فروشگاه خود اضافه کنید و به خریداران خود هوشمندانه‌ترین سایز را پیشنهاد دهید.",
-    get_started: "شروع رایگان مسیر",
+    get_started: "شروع رایگان",
     features_title: "امکانات پیشرفته پلتفرم تنخور",
     feature_matrix_title: "ماتریس موجودی دو بعدی",
     feature_matrix_desc: "به جای ساخت تک‌تک متغیرها، موجودی و قیمت را در یک جدول سریع و متقاطع از رنگ‌ها و سایزها مدیریت کنید.",
@@ -91,9 +91,9 @@ export const locales: Record<'fa' | 'en', LocaleDictionary> = {
     back_to_products: "بازگشت به مدیریت محصولات"
   },
   en: {
-    brand_name: "Tankhor (تنخور)",
+    brand_name: "Tankhor",
     tagline: "Fashion Inventory Grid Matrix & Customer Size Advisor - tankhor.com",
-    hero_title: "Revolutionize Fashion Sizing & Stock Management with Tankhor",
+    hero_title: "Smart Fashion Sizing & Inventory Management",
     hero_subtitle: "Inject an interactive 2D inventory management matrix into your shop, and offer smart sizing recommendations to buyers in seconds on tankhor.com.",
     get_started: "Get Started Free",
     features_title: "Advanced Tankhor Platform Features",

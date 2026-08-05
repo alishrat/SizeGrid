@@ -1,0 +1,61 @@
+import { User, Product, InventoryItem, Color, Size, SizeGuideTemplate, Category, ClothingType, ClothingTypeSlug, DiffSyncPayload } from '../types';
+
+export type SyncStatus = 'synced' | 'pending_create' | 'pending_update' | 'pending_delete';
+export type StorageMode = 'local_offline' | 'cloud_synced';
+export type EntityType = 'product' | 'category' | 'inventory' | 'size_template' | 'color' | 'size';
+
+export interface SyncQueueItem {
+  id: string;
+  entityType: EntityType;
+  entityId: number | string;
+  operation: 'create' | 'update' | 'delete';
+  payload: any;
+  timestamp: number;
+}
+
+export interface SyncStats {
+  mode: StorageMode;
+  isOnline: boolean;
+  pendingCount: number;
+  lastSyncTime: number | null;
+  syncInProgress: boolean;
+  lastError: string | null;
+}
+
+export interface IStorageAdapter {
+  // Initialization & Meta
+  getMode(): StorageMode;
+  setMode(mode: StorageMode): void;
+
+  // Products
+  getProducts(): Promise<Product[]>;
+  getProductById(id: number): Promise<Product | null>;
+  saveProduct(product: Partial<Product> & { name_fa: string; base_price: number }): Promise<Product>;
+  deleteProduct(id: number): Promise<boolean>;
+
+  // Categories
+  getCategories(): Promise<Category[]>;
+  saveCategory(name: string, systemType?: number, clothingTypeSlug?: ClothingTypeSlug): Promise<Category>;
+  deleteCategory(id: number): Promise<boolean>;
+
+  // Sizes & Colors
+  getSizes(): Promise<Size[]>;
+  saveSize(name: string, sortOrder?: number): Promise<Size>;
+  getColors(): Promise<Color[]>;
+  saveColor(nameFa: string, nameEn: string, hexCode: string): Promise<Color>;
+
+  // Size Guide Templates
+  getSizeGuideTemplates(): Promise<SizeGuideTemplate[]>;
+  saveSizeGuideTemplate(template: Omit<SizeGuideTemplate, 'id'> & { id?: number }): Promise<SizeGuideTemplate>;
+  deleteSizeGuideTemplate(id: number): Promise<boolean>;
+
+  // Inventory
+  getInventory(productId?: number): Promise<InventoryItem[]>;
+  updateInventory(items: InventoryItem[]): Promise<boolean>;
+  syncInventoryDiff(productId: number, payload: DiffSyncPayload): Promise<boolean>;
+
+  // Sync Operations
+  getPendingSyncQueue(): SyncQueueItem[];
+  clearPendingSyncQueue(): void;
+  getSyncStats(): SyncStats;
+}

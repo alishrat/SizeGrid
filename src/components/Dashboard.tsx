@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { locales } from '../locales';
 import { DirectusAPI } from '../directus';
+import { storageManager, SyncStats } from '../storage';
 import { useRouter } from './Router';
 import { Product, InventoryItem, Color, Size, SizeGuideTemplate, SizeGuideTemplateItem, ClothingTypeSlug } from '../types';
 import {
@@ -35,7 +36,13 @@ import {
   CheckCircle2,
   RefreshCw,
   Ruler,
-  Loader2
+  Loader2,
+  Cloud,
+  CloudOff,
+  Database,
+  Wifi,
+  WifiOff,
+  Globe
 } from 'lucide-react';
 
 const getDefaultMeasurementsForSize = (sizeName: string) => {
@@ -198,6 +205,31 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       navigate('/');
     }
   }, [currentUser]);
+
+  // Storage Adapter & Offline/Cloud Sync state
+  const [syncStats, setSyncStats] = useState<SyncStats>(storageManager.getSyncStats());
+  const [syncingCloud, setSyncingCloud] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = storageManager.subscribe((stats) => {
+      setSyncStats(stats);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleManualSync = async () => {
+    setSyncingCloud(true);
+    setError('');
+    setSuccess('');
+    const res = await storageManager.syncLocalToCloud();
+    setSyncingCloud(false);
+    if (res.success) {
+      setSuccess(isRtl ? `همگام‌سازی با موفقیت انجام شد (${res.syncedCount} تغییر بروز شد).` : `Cloud sync completed (${res.syncedCount} changes synced).`);
+      setTimeout(() => setSuccess(''), 4000);
+    } else {
+      setError(res.error || (isRtl ? "خطا در همگام‌سازی با سرور ابری." : "Error syncing to cloud server."));
+    }
+  };
 
   // Global Lists
   const [products, setProducts] = useState<Product[]>([]);
@@ -1305,6 +1337,20 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Directus Cloud Sync Icon Button */}
+            <button
+              onClick={handleManualSync}
+              disabled={syncingCloud}
+              className={`p-2 rounded-lg border border-neutral-800 transition-all cursor-pointer relative flex items-center justify-center ${syncingCloud ? 'bg-sky-500/20 text-sky-400' : 'bg-neutral-900 text-sky-400 hover:bg-neutral-800'}`}
+              title={isRtl ? "همگام‌سازی با کلود دایرکتوس" : "Sync with Directus Cloud"}
+              aria-label="Cloud Sync"
+            >
+              <Cloud className={`w-4 h-4 ${syncingCloud ? 'animate-bounce' : ''}`} />
+              {syncStats.pendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full border-2 border-neutral-900 animate-pulse" />
+              )}
+            </button>
+
             <span className="hidden lg:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-[10px] font-extrabold text-neutral-300">
               <Info className="w-3.5 h-3.5 text-amber-400" />
               <span>{isRtl ? `کالاها: ${activeProductsCount} از ۳۰ (طرح رایگان)` : `Products: ${activeProductsCount} of 30 (Free Tier)`}</span>
@@ -1313,9 +1359,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             {/* Language Controls */}
             <button
               onClick={() => setLang(lang === 'fa' ? 'en' : 'fa')}
-              className="px-2.5 py-1.5 border rounded-lg text-xs font-semibold hover:bg-neutral-500/10 border-neutral-800 text-neutral-300"
+              className="p-2 border rounded-lg hover:bg-neutral-800 border-neutral-800 text-neutral-300 flex items-center justify-center transition-all cursor-pointer"
+              title={lang === 'fa' ? 'English' : 'فارسی'}
+              aria-label="Toggle language"
             >
-              {lang === 'fa' ? 'English' : 'فارسی'}
+              <Globe className="w-4 h-4 text-sky-400" />
             </button>
 
             {/* Dark/Light Switch */}
@@ -3775,7 +3823,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                     <button
                       type="submit"
                       disabled={savingSettings}
-                      className="w-full py-2.5 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 text-white text-xs font-extrabold rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                      className="w-full py-2.5 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 text-white text-xs font-extrabold rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {savingSettings ? (
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -3784,6 +3832,90 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       )}
                     </button>
                   </form>
+
+                  {/* Storage Adapter & Offline/Cloud Configuration Card */}
+                  <div className="pt-6 border-t border-white/10 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Database className="w-5 h-5 text-sky-400" />
+                        <div>
+                          <h4 className="text-sm font-extrabold text-neutral-200">
+                            {isRtl ? "تنظیمات لایه ذخیره‌سازی و دیتابیس (Storage Adapter)" : "Local Storage Adapter & Cloud Sync"}
+                          </h4>
+                          <p className="text-[11px] text-neutral-400">
+                            {isRtl ? "انتخاب بین کارکرد ۱۰۰٪ آفلاین رایگان و همگام‌سازی ابری اشتراکی" : "Choose between 100% free offline mode and paid cloud sync."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          storageManager.setMode('local_offline');
+                          setSuccess(isRtl ? "حالت دیتابیس آفلاین محلی فعال شد." : "Offline local database mode activated.");
+                          setTimeout(() => setSuccess(''), 3000);
+                        }}
+                        className={`p-4 rounded-xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                          syncStats.mode === 'local_offline' 
+                            ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 shadow-md shadow-emerald-500/10' 
+                            : 'bg-neutral-950/40 border-white/10 hover:border-white/20 text-neutral-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <Database className="w-4 h-4" />
+                          {syncStats.mode === 'local_offline' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-black">{isRtl ? "حالت آفلاین محلی (رایگان)" : "Local Offline (Free)"}</p>
+                          <p className="text-[10px] text-neutral-400 mt-0.5">{isRtl ? "ذخیره‌سازی سریع در حافظه دستگاه بدون نیاز به اینترنت" : "Fast device-local storage without network dependence"}</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          storageManager.setMode('cloud_synced');
+                          setSuccess(isRtl ? "حالت همگام‌سازی ابری فعال شد." : "Cloud synced mode activated.");
+                          setTimeout(() => setSuccess(''), 3000);
+                        }}
+                        className={`p-4 rounded-xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                          syncStats.mode === 'cloud_synced' 
+                            ? 'bg-sky-500/10 border-sky-500/40 text-sky-300 shadow-md shadow-sky-500/10' 
+                            : 'bg-neutral-950/40 border-white/10 hover:border-white/20 text-neutral-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <Cloud className="w-4 h-4" />
+                          {syncStats.mode === 'cloud_synced' && <CheckCircle2 className="w-4 h-4 text-sky-400" />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-black">{isRtl ? "همگام‌سازی ابری (اشتراکی)" : "Cloud Synced (Subscription)"}</p>
+                          <p className="text-[10px] text-neutral-400 mt-0.5">{isRtl ? "پشتیبان‌گیری خودکار و همگام‌سازی بین دستگاهی" : "Automatic backup & cross-device sync"}</p>
+                        </div>
+                      </button>
+                    </div>
+
+                    {syncStats.pendingCount > 0 && (
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-between text-xs">
+                        <span className="text-amber-400 font-extrabold flex items-center gap-2">
+                          <RefreshCw className="w-4 h-4" />
+                          <span>{isRtl ? `${syncStats.pendingCount} تغییر محلی آماده ارسال به ابرید` : `${syncStats.pendingCount} pending local changes queued for cloud sync`}</span>
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={handleManualSync}
+                          disabled={syncingCloud}
+                          className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingCloud ? 'animate-spin' : ''}`} />
+                          <span>{isRtl ? "ارسال تغییرات به کلود" : "Sync Now"}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

@@ -563,9 +563,11 @@ export default function Storefront({ lang, setLang, darkMode, setDarkMode }: Sto
             {/* Language Controls */}
             <button
               onClick={() => setLang(lang === 'fa' ? 'en' : 'fa')}
-              className="p-2 border rounded-lg text-xs font-semibold hover:bg-neutral-500/10 border-neutral-800 text-neutral-300"
+              className="p-2 border rounded-lg hover:bg-neutral-800 border-neutral-800 text-neutral-300 flex items-center justify-center transition-all cursor-pointer"
+              title={lang === 'fa' ? 'English' : 'فارسی'}
+              aria-label="Toggle language"
             >
-              {lang === 'fa' ? 'English' : 'فارسی'}
+              <Globe className="w-4 h-4 text-sky-400" />
             </button>
 
             {/* Dark Mode switcher */}
