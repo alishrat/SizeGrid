@@ -1351,7 +1351,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               )}
             </button>
 
-            <span className="hidden lg:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-[10px] font-extrabold text-neutral-300">
+            <span className={`hidden lg:inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-extrabold ${darkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-300' : 'bg-neutral-100 border-neutral-200 text-neutral-700'}`}>
               <Info className="w-3.5 h-3.5 text-amber-400" />
               <span>{isRtl ? `کالاها: ${activeProductsCount} از ۳۰ (طرح رایگان)` : `Products: ${activeProductsCount} of 30 (Free Tier)`}</span>
             </span>
@@ -1359,7 +1359,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             {/* Language Controls */}
             <button
               onClick={() => setLang(lang === 'fa' ? 'en' : 'fa')}
-              className="p-2 border rounded-lg hover:bg-neutral-800 border-neutral-800 text-neutral-300 flex items-center justify-center transition-all cursor-pointer"
+              className={`p-2 border rounded-lg flex items-center justify-center transition-all cursor-pointer ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-800' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
               title={lang === 'fa' ? 'English' : 'فارسی'}
               aria-label="Toggle language"
             >
@@ -1369,7 +1369,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             {/* Dark/Light Switch */}
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 border rounded-lg border-neutral-800 text-neutral-300 hover:bg-neutral-800"
+              className={`p-2 border rounded-lg transition-all ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-800' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
             >
               {darkMode ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-neutral-600" />}
             </button>
@@ -1410,11 +1410,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-base sm:text-lg font-black">{isRtl ? "کاتالوگ لباس‌های شما" : "Garments Catalog"}</h3>
-                          <p className="text-[11px] sm:text-xs text-neutral-400">{isRtl ? "محصولات خود را تعریف کرده و جدول سایز و تنوع رنگ آن را مشخص کنید." : "Add garments, and configure size/color variations grid."}</p>
+                          <p className={`text-[11px] sm:text-xs ${darkMode ? 'text-neutral-400' : 'text-neutral-500'}`}>{isRtl ? "محصولات خود را تعریف کرده و جدول سایز و تنوع رنگ آن را مشخص کنید." : "Add garments, and configure size/color variations grid."}</p>
                         </div>
                         <button
                           onClick={triggerAddProductMode}
-                          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-bold rounded-lg shadow-lg shadow-sky-600/10 flex items-center gap-2 transition-all"
+                          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-bold rounded-lg shadow-lg shadow-sky-600/10 flex items-center gap-2 transition-all cursor-pointer"
                         >
                           <Plus className="w-4 h-4" />
                           <span>{t.add_product}</span>
@@ -1422,7 +1422,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       </div>
 
                       {/* Search & View Toggle Controls */}
-                      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between p-4 rounded-xl bg-neutral-900/40 border border-white/10 backdrop-blur-md">
+                      <div className={`flex flex-col sm:flex-row gap-3 items-center justify-between p-4 rounded-xl border backdrop-blur-md ${darkMode ? 'bg-neutral-900/40 border-white/10' : 'bg-white border-neutral-200 shadow-sm'}`}>
                         <div className="relative w-full sm:max-w-md">
                           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                           <input
@@ -1435,12 +1435,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                         </div>
 
                         <div className="flex items-center gap-2 self-end sm:self-auto">
-                          <span className="text-xs text-neutral-400 font-bold">{isRtl ? "حالت نمایش:" : "View Mode:"}</span>
-                          <div className="flex p-0.5 rounded-lg bg-neutral-950 border border-white/10">
+                          <span className={`text-xs font-bold ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "حالت نمایش:" : "View Mode:"}</span>
+                          <div className={`flex p-0.5 rounded-lg border ${darkMode ? 'bg-neutral-950 border-white/10' : 'bg-neutral-100 border-neutral-200'}`}>
                             <button
                               type="button"
                               onClick={() => setProductView('grid')}
-                              className={`p-1.5 rounded-md transition-all cursor-pointer ${productView === 'grid' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
+                              className={`p-1.5 rounded-md transition-all cursor-pointer ${productView === 'grid' ? 'bg-sky-600 text-white' : (darkMode ? 'text-neutral-400 hover:text-neutral-200' : 'text-neutral-500 hover:text-neutral-800')}`}
                               title={isRtl ? "نمایش شبکه‌ای" : "Grid View"}
                             >
                               <Grid className="w-4 h-4" />
@@ -1448,7 +1448,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             <button
                               type="button"
                               onClick={() => setProductView('list')}
-                              className={`p-1.5 rounded-md transition-all cursor-pointer ${productView === 'list' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
+                              className={`p-1.5 rounded-md transition-all cursor-pointer ${productView === 'list' ? 'bg-sky-600 text-white' : (darkMode ? 'text-neutral-400 hover:text-neutral-200' : 'text-neutral-500 hover:text-neutral-800')}`}
                               title={isRtl ? "نمایش جدولی" : "List/Table View"}
                             >
                               <List className="w-4 h-4" />
@@ -1458,9 +1458,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       </div>
 
                       {products.length === 0 ? (
-                        <div className="text-center py-20 border border-dashed border-neutral-800 rounded-2xl bg-neutral-900/10">
-                          <Package className="w-12 h-12 text-neutral-600 mx-auto mb-4" />
-                          <p className="text-sm font-bold text-neutral-400">{isRtl ? "هیچ محصولی ثبت نشده است." : "No products available."}</p>
+                        <div className={`text-center py-20 border border-dashed rounded-2xl ${darkMode ? 'border-neutral-800 bg-neutral-900/10' : 'border-neutral-200 bg-white'}`}>
+                          <Package className="w-12 h-12 text-neutral-400 mx-auto mb-4 opacity-50" />
+                          <p className={`text-sm font-bold ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "هیچ محصولی ثبت نشده است." : "No products available."}</p>
                         </div>
                       ) : (
                         <>
@@ -1479,13 +1479,13 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                          sku.toLowerCase().includes(searchLower);
                                 })
                                 .map(prod => (
-                                  <div key={prod.id} className={`rounded-xl border overflow-hidden flex flex-col justify-between backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:scale-[1.01] ${darkMode ? 'bg-neutral-900/40 border-white/10' : 'bg-white border-neutral-200'}`}>
+                                  <div key={prod.id} className={`rounded-xl border overflow-hidden flex flex-col justify-between backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:scale-[1.01] ${darkMode ? 'bg-neutral-900/40 border-white/10' : 'bg-white border-neutral-200 shadow-sm'}`}>
                                     <div>
-                                      <div className="h-40 bg-neutral-950/20 relative">
+                                      <div className={`h-40 relative ${darkMode ? 'bg-neutral-950/20' : 'bg-neutral-100'}`}>
                                         {prod.image ? (
                                           <img src={prod.image} alt={prod.name_fa} className="w-full h-full object-cover" />
                                         ) : (
-                                          <div className="w-full h-full flex flex-col justify-center items-center text-neutral-500 bg-neutral-950/20">
+                                          <div className="w-full h-full flex flex-col justify-center items-center text-neutral-400">
                                             <Image className="w-8 h-8 opacity-40 mb-1" />
                                             <span className="text-[10px]">{isRtl ? "فاقد تصویر کالا" : "No Image"}</span>
                                           </div>
@@ -1496,8 +1496,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                       </div>
 
                                       <div className="p-4 space-y-2">
-                                        <h4 className="font-extrabold text-sm line-clamp-1">{isRtl ? prod.name_fa : prod.name_en}</h4>
-                                        <p className="text-[10px] text-neutral-400 line-clamp-2 leading-relaxed">
+                                        <h4 className={`font-extrabold text-sm line-clamp-1 ${darkMode ? 'text-white' : 'text-neutral-900'}`}>{isRtl ? prod.name_fa : prod.name_en}</h4>
+                                        <p className={`text-[10px] line-clamp-2 leading-relaxed ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                                           {isRtl ? prod.description_fa : prod.description_en}
                                         </p>
                                         <p className="text-xs font-black text-sky-500 pt-1">
@@ -1506,7 +1506,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                       </div>
                                     </div>
 
-                                    <div className="p-4 border-t border-neutral-800/40 grid grid-cols-2 gap-2">
+                                    <div className={`p-4 border-t grid grid-cols-2 gap-2 ${darkMode ? 'border-neutral-800/40' : 'border-neutral-100 bg-neutral-50/50'}`}>
                                       <button
                                         onClick={() => triggerEditProductMode(prod)}
                                         className="col-span-2 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
@@ -1539,9 +1539,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                 ))}
                             </div>
                           ) : (
-                            <div className="overflow-x-auto rounded-xl border border-white/10 bg-neutral-900/40 backdrop-blur-md">
+                            <div className={`overflow-x-auto rounded-xl border ${darkMode ? 'border-white/10 bg-neutral-900/40 backdrop-blur-md' : 'border-neutral-200 bg-white shadow-sm'}`}>
                               <table className="w-full text-right text-xs">
-                                <thead className="bg-neutral-950/60 text-neutral-400 font-black border-b border-white/10">
+                                <thead className={`font-black border-b ${darkMode ? 'bg-neutral-950/60 text-neutral-400 border-white/10' : 'bg-neutral-100 text-neutral-700 border-neutral-200'}`}>
                                   <tr>
                                     <th className="p-4 text-center w-16">{isRtl ? "تصویر" : "Image"}</th>
                                     <th className="p-4">{isRtl ? "نام کالا / جزئیات" : "Product Details"}</th>
@@ -1551,7 +1551,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                     <th className="p-4 text-center w-40">{isRtl ? "عملیات" : "Actions"}</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5">
+                                <tbody className={`divide-y ${darkMode ? 'divide-white/5' : 'divide-neutral-100'}`}>
                                   {products
                                     .filter(prod => {
                                       const title = (isRtl ? prod.name_fa : prod.name_en) || '';
@@ -1565,25 +1565,25 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                              sku.toLowerCase().includes(searchLower);
                                     })
                                     .map(prod => (
-                                      <tr key={prod.id} className="hover:bg-white/5 transition-colors">
+                                      <tr key={prod.id} className={`transition-colors ${darkMode ? 'hover:bg-white/5' : 'hover:bg-neutral-50'}`}>
                                         <td className="p-4 text-center">
-                                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-950/40 border border-white/10 flex items-center justify-center mx-auto">
+                                          <div className={`w-10 h-10 rounded-lg overflow-hidden border flex items-center justify-center mx-auto ${darkMode ? 'bg-neutral-950/40 border-white/10' : 'bg-neutral-100 border-neutral-200'}`}>
                                             {prod.image ? (
                                               <img src={prod.image} alt={prod.name_fa} className="w-full h-full object-cover" />
                                             ) : (
-                                              <Image className="w-4 h-4 text-neutral-500 opacity-40" />
+                                              <Image className="w-4 h-4 text-neutral-400 opacity-40" />
                                             )}
                                           </div>
                                         </td>
-                                        <td className="p-4 font-extrabold text-neutral-200">
+                                        <td className={`p-4 font-extrabold ${darkMode ? 'text-neutral-200' : 'text-neutral-900'}`}>
                                           <div>
                                             <p>{isRtl ? prod.name_fa : prod.name_en}</p>
-                                            <p className="text-[10px] text-neutral-400 line-clamp-1 font-normal mt-0.5">
+                                            <p className={`text-[10px] line-clamp-1 font-normal mt-0.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-500'}`}>
                                               {isRtl ? prod.description_fa : prod.description_en}
                                             </p>
                                           </div>
                                         </td>
-                                        <td className="p-4 font-mono text-[10px] text-neutral-400">
+                                        <td className={`p-4 font-mono text-[10px] ${darkMode ? 'text-neutral-400' : 'text-neutral-500'}`}>
                                           SG-PROD-{prod.id}
                                         </td>
                                         <td className="p-4">
@@ -1639,13 +1639,13 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                     <div className={`p-4 sm:p-6 rounded-2xl border ${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                       
                       {/* Product header */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800/40 pb-4 mb-6">
+                      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-6 ${darkMode ? 'border-neutral-800/40' : 'border-neutral-200'}`}>
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-neutral-950/20 border border-neutral-800 rounded-lg overflow-hidden shrink-0">
+                          <div className={`w-12 h-12 border rounded-lg overflow-hidden shrink-0 ${darkMode ? 'bg-neutral-950/20 border-neutral-800' : 'bg-neutral-100 border-neutral-200'}`}>
                             {prodFormImage ? (
                               <img src={prodFormImage} alt="Product logo" className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-neutral-500">
+                              <div className="w-full h-full flex items-center justify-center text-neutral-400">
                                 <Package className="w-5 h-5" />
                               </div>
                             )}
@@ -1654,7 +1654,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             <h3 className="text-sm font-extrabold text-sky-400">
                               {isEditingProd.id === 0 ? (isRtl ? "ایجاد محصول جدید" : "Create New Product") : (isRtl ? "تنظیمات همه‌جانبه کالا" : "Configure Product Suite")}
                             </h3>
-                            <p className="text-xs font-bold text-neutral-400 mt-0.5">
+                            <p className={`text-xs font-bold mt-0.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                               {isEditingProd.id === 0 
                                 ? (isRtl ? "اطلاعات محصول را ثبت کنید" : "Define general options") 
                                 : (isRtl ? `در حال ویرایش: ${isEditingProd.name_fa}` : `Editing: ${isEditingProd.name_en}`)
@@ -1665,7 +1665,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                         <button
                           onClick={() => setIsEditingProd(null)}
-                          className="px-3 py-1.5 border border-neutral-700 hover:bg-neutral-800 text-neutral-400 text-xs rounded-lg font-bold flex items-center gap-1"
+                          className={`px-3 py-1.5 border text-xs rounded-lg font-bold flex items-center gap-1 cursor-pointer transition-all ${darkMode ? 'border-neutral-700 hover:bg-neutral-800 text-neutral-400' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-600'}`}
                         >
                           <ChevronRight className={`w-4 h-4 ${isRtl ? '' : 'rotate-180'}`} />
                           <span>{isRtl ? "بازگشت به لیست کاتالوگ" : "Back to Catalog"}</span>
@@ -1673,11 +1673,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       </div>
 
                       {/* CONSOLIDATED EDIT TABS */}
-                      <div className="flex border-b border-neutral-800/60 mb-6 overflow-x-auto gap-2">
+                      <div className={`flex border-b mb-6 overflow-x-auto gap-2 ${darkMode ? 'border-neutral-800/60' : 'border-neutral-200'}`}>
                         <button
                           type="button"
                           onClick={() => setEditTab('general')}
-                          className={`py-2 px-4 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap ${editTab === 'general' ? 'border-sky-500 text-sky-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+                          className={`py-2 px-4 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap cursor-pointer ${editTab === 'general' ? 'border-sky-500 text-sky-400' : (darkMode ? 'border-transparent text-neutral-400 hover:text-neutral-200' : 'border-transparent text-neutral-500 hover:text-neutral-900')}`}
                         >
                           <span>{isRtl ? "۱. مشخصات عمومی، رنگ و سایز" : "1. General & Attribute Selection"}</span>
                         </button>
@@ -1691,7 +1691,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             }
                             setEditTab('guides');
                           }}
-                          className={`py-2 px-4 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap ${isEditingProd.id === 0 ? 'opacity-40 cursor-not-allowed' : ''} ${editTab === 'guides' ? 'border-sky-500 text-sky-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+                          className={`py-2 px-4 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap cursor-pointer ${isEditingProd.id === 0 ? 'opacity-40 cursor-not-allowed' : ''} ${editTab === 'guides' ? 'border-sky-500 text-sky-400' : (darkMode ? 'border-transparent text-neutral-400 hover:text-neutral-200' : 'border-transparent text-neutral-500 hover:text-neutral-900')}`}
                         >
                           <span>{isRtl ? "۲. راهنمای علمی سایز مشتری" : "2. Sizing Advisor Rules"}</span>
                         </button>
@@ -1705,7 +1705,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             }
                             setEditTab('matrix');
                           }}
-                          className={`py-2 px-4 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap ${isEditingProd.id === 0 ? 'opacity-40 cursor-not-allowed' : ''} ${editTab === 'matrix' ? 'border-sky-500 text-sky-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+                          className={`py-2 px-4 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap cursor-pointer ${isEditingProd.id === 0 ? 'opacity-40 cursor-not-allowed' : ''} ${editTab === 'matrix' ? 'border-sky-500 text-sky-400' : (darkMode ? 'border-transparent text-neutral-400 hover:text-neutral-200' : 'border-transparent text-neutral-500 hover:text-neutral-900')}`}
                         >
                           <span>{isRtl ? "۳. ماتریس ۲ بعدی انبار محصول" : "3. 2D Stock Matrix Grid"}</span>
                         </button>
@@ -1716,7 +1716,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                         <form onSubmit={saveProductSubmit} className="space-y-6">
                           <div className="grid sm:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-xs font-bold mb-1.5 text-neutral-400">{t.product_name_fa}</label>
+                              <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{t.product_name_fa}</label>
                               <input
                                 type="text"
                                 required
@@ -1728,7 +1728,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             </div>
 
                             <div>
-                              <label className="block text-xs font-bold mb-1.5 text-neutral-400">{t.product_name_en}</label>
+                              <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{t.product_name_en}</label>
                               <input
                                 type="text"
                                 required
@@ -1742,7 +1742,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                           <div className="grid sm:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-xs font-bold mb-1.5 text-neutral-400">{t.desc_fa}</label>
+                              <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{t.desc_fa}</label>
                               <textarea
                                 rows={3}
                                 value={prodFormDescFa}
@@ -1753,7 +1753,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             </div>
 
                             <div>
-                              <label className="block text-xs font-bold mb-1.5 text-neutral-400">{t.desc_en}</label>
+                              <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{t.desc_en}</label>
                               <textarea
                                 rows={3}
                                 value={prodFormDescEn}
@@ -1766,7 +1766,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                           <div className="grid sm:grid-cols-3 gap-4">
                             <div>
-                              <label className="block text-xs font-bold mb-1.5 text-neutral-400">{t.base_price}</label>
+                              <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{t.base_price}</label>
                               <input
                                 type="number"
                                 required
@@ -1778,7 +1778,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                             <div>
                               <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-xs font-bold text-neutral-400">{t.category}</label>
+                                <label className={`text-xs font-bold ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{t.category}</label>
                                 <button
                                   type="button"
                                   onClick={() => setShowAddCategoryModal(true)}
@@ -1810,13 +1810,13 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             </div>
 
                             <div>
-                              <label className="block text-xs font-bold mb-1.5 text-neutral-400">
+                              <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>
                                 {isRtl ? "تصویر کالا (آپلود تصویر یا آدرس مستقیم)" : "Product Image (Upload or Direct URL)"}
                               </label>
                               
                               <div className="space-y-3">
                                 {prodFormImage ? (
-                                  <div className="relative group rounded-xl overflow-hidden border border-white/10 aspect-video bg-neutral-950/40 flex items-center justify-center">
+                                  <div className={`relative group rounded-xl overflow-hidden border aspect-video flex items-center justify-center ${darkMode ? 'border-white/10 bg-neutral-950/40' : 'border-neutral-200 bg-neutral-100'}`}>
                                     <img src={prodFormImage} alt="Preview" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                                     <div className="absolute inset-0 bg-neutral-950/80 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-all duration-200">
                                       <button
@@ -1831,7 +1831,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                   </div>
                                 ) : (
                                   <div className="space-y-2">
-                                    <label className={`flex flex-col items-center justify-center border-2 border-dashed ${prodFormStatus === 'saving' ? 'border-sky-500 bg-sky-500/10' : 'border-neutral-800 hover:border-sky-500/50 bg-neutral-950/20 hover:bg-sky-500/5'} rounded-xl p-5 transition-all cursor-pointer text-center group`}>
+                                    <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-5 transition-all cursor-pointer text-center group ${
+                                      prodFormStatus === 'saving' 
+                                        ? 'border-sky-500 bg-sky-500/10' 
+                                        : (darkMode ? 'border-neutral-800 hover:border-sky-500/50 bg-neutral-950/20 hover:bg-sky-500/5' : 'border-neutral-300 hover:border-sky-500/50 bg-neutral-50 hover:bg-sky-50/50')
+                                    }`}>
                                       {prodFormStatus === 'saving' ? (
                                         <div className="flex flex-col items-center gap-2 py-2">
                                           <Loader2 className="w-7 h-7 text-sky-400 animate-spin" />
@@ -1841,11 +1845,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                         </div>
                                       ) : (
                                         <>
-                                          <Upload className="w-7 h-7 text-neutral-500 group-hover:text-sky-400 group-hover:scale-110 transition-all mb-1.5" />
-                                          <span className="text-xs font-extrabold text-neutral-300 group-hover:text-sky-400">
+                                          <Upload className="w-7 h-7 text-neutral-400 group-hover:text-sky-500 group-hover:scale-110 transition-all mb-1.5" />
+                                          <span className={`text-xs font-extrabold group-hover:text-sky-500 ${darkMode ? 'text-neutral-300' : 'text-neutral-700'}`}>
                                             {isRtl ? "انتخاب تصویر برای فشرده‌سازی و آپلود" : "Click to Compress & Upload Image"}
                                           </span>
-                                          <span className="text-[10px] text-neutral-500 mt-1 leading-relaxed">
+                                          <span className="text-[10px] text-neutral-400 mt-1 leading-relaxed">
                                             {isRtl ? "تصویر به‌صورت خودکار فشرده و در دیتابیس آپلود می‌شود" : "Compressed in-browser via canvas for fast uploads"}
                                           </span>
                                         </>
@@ -1892,8 +1896,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                           {/* BRAND COLOR MULTI-SELECT CHIPS */}
                           <div className="space-y-3">
                             <div>
-                              <h4 className="text-xs font-extrabold text-neutral-400">{isRtl ? "رنگ‌های موجود برای این کالا (رنگ‌ها را انتخاب کنید)" : "Available Garment Colors (Multi-Select)"}</h4>
-                              <p className="text-[10px] text-neutral-500 mt-1">{isRtl ? "رنگ‌های مربوط به کالا را کلیک و تیک بزنید." : "Toggle active colors of this product layout."}</p>
+                              <h4 className={`text-xs font-extrabold ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{isRtl ? "رنگ‌های موجود برای این کالا (رنگ‌ها را انتخاب کنید)" : "Available Garment Colors (Multi-Select)"}</h4>
+                              <p className={`text-[10px] mt-1 ${darkMode ? 'text-neutral-500' : 'text-neutral-500'}`}>{isRtl ? "رنگ‌های مربوط به کالا را کلیک و تیک بزنید." : "Toggle active colors of this product layout."}</p>
                             </div>
                             <div className="flex flex-wrap gap-2.5">
                               {colors.map(col => {
@@ -1903,9 +1907,13 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                     key={col.id}
                                     type="button"
                                     onClick={() => toggleColorSelect(col.id)}
-                                    className={`px-3 py-2 rounded-xl border text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${isSelected ? 'border-sky-500 bg-sky-500/10 text-sky-400 shadow-md shadow-sky-600/5' : 'border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:text-neutral-200'}`}
+                                    className={`px-3 py-2 rounded-xl border text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
+                                      isSelected 
+                                        ? 'border-sky-500 bg-sky-500/10 text-sky-400 shadow-md shadow-sky-600/5' 
+                                        : (darkMode ? 'border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:text-neutral-200' : 'border-neutral-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200')
+                                    }`}
                                   >
-                                    <span className="w-3.5 h-3.5 rounded-full border border-neutral-800 shrink-0" style={{ backgroundColor: col.hex_code }} />
+                                    <span className="w-3.5 h-3.5 rounded-full border border-neutral-300 shrink-0" style={{ backgroundColor: col.hex_code }} />
                                     <span>{isRtl ? col.name_fa : col.name_en}</span>
                                     {isSelected && <Check className="w-3.5 h-3.5 text-sky-400 ml-1" />}
                                   </button>
@@ -1917,7 +1925,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                           {/* BRAND SIZE MULTI-SELECT CHIPS */}
                           <div className="space-y-3">
                             <div>
-                              <h4 className="text-xs font-extrabold text-neutral-400">{isRtl ? "سایزهای موجود برای این کالا (سایزها را انتخاب کنید)" : "Available Garment Sizes (Multi-Select)"}</h4>
+                              <h4 className={`text-xs font-extrabold ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{isRtl ? "سایزهای موجود برای این کالا (سایزها را انتخاب کنید)" : "Available Garment Sizes (Multi-Select)"}</h4>
                               <p className="text-[10px] text-neutral-500 mt-1">{isRtl ? "سایزهای تولیدی و آماده ارسال این کالا را انتخاب کنید." : "Toggle active sizes of this garment."}</p>
                             </div>
                             <div className="flex flex-wrap gap-2.5">
@@ -1928,9 +1936,13 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                     key={sz.id}
                                     type="button"
                                     onClick={() => toggleSizeSelect(sz.id)}
-                                    className={`px-4 py-2 rounded-xl border text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${isSelected ? 'border-sky-500 bg-sky-500/10 text-sky-400' : 'border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:text-neutral-200'}`}
+                                    className={`px-4 py-2 rounded-xl border text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
+                                      isSelected 
+                                        ? 'border-sky-500 bg-sky-500/10 text-sky-400' 
+                                        : (darkMode ? 'border-neutral-800 bg-neutral-900/40 text-neutral-400 hover:text-neutral-200' : 'border-neutral-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200')
+                                    }`}
                                   >
-                                    <span className="w-6 h-6 rounded-lg bg-neutral-950/60 flex items-center justify-center text-[10px] text-sky-400 font-bold border border-neutral-800">{sz.name}</span>
+                                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold border ${darkMode ? 'bg-neutral-950/60 border-neutral-800 text-sky-400' : 'bg-white border-neutral-300 text-sky-600'}`}>{sz.name}</span>
                                     {isSelected && <Check className="w-3.5 h-3.5 text-sky-400 ml-1" />}
                                   </button>
                                 );
@@ -1949,11 +1961,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                           </div>
 
                           {/* Form save footer */}
-                          <div className="flex justify-end pt-4 border-t border-neutral-800/40 gap-3">
+                          <div className={`flex justify-end pt-4 border-t gap-3 ${darkMode ? 'border-neutral-800/40' : 'border-neutral-200'}`}>
                             <button
                               type="button"
                               onClick={() => setIsEditingProd(null)}
-                              className="px-4 py-2.5 border border-neutral-700 hover:bg-neutral-800 rounded-lg text-xs text-neutral-400 font-bold"
+                              className={`px-4 py-2.5 border rounded-lg text-xs font-bold transition-all cursor-pointer ${darkMode ? 'border-neutral-700 hover:bg-neutral-800 text-neutral-400' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-600'}`}
                             >
                               {t.cancel}
                             </button>
@@ -1961,7 +1973,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             <button
                               type="submit"
                               disabled={prodFormStatus === 'saving'}
-                              className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg shadow-lg flex items-center gap-2"
+                              className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg shadow-lg flex items-center gap-2 cursor-pointer transition-all"
                             >
                               {prodFormStatus === 'saving' ? (
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1980,16 +1992,16 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       {editTab === 'guides' && isEditingProd.id > 0 && (
                         <div className="space-y-6">
                           {/* Sizing Architecture Choice */}
-                          <div className="p-4 bg-neutral-900/60 border border-neutral-800 rounded-xl space-y-4">
-                            <div className="text-xs font-bold text-neutral-400">{isRtl ? "۱. تعیین شیوه مدیریت سایزبندی و قوانین هوشمند:" : "1. Sizing Strategy & Intelligent Rules:"}</div>
+                          <div className={`p-4 rounded-xl space-y-4 border ${darkMode ? 'bg-neutral-900/60 border-neutral-800' : 'bg-neutral-50 border-neutral-200'}`}>
+                            <div className={`text-xs font-bold ${darkMode ? 'text-neutral-400' : 'text-neutral-700'}`}>{isRtl ? "۱. تعیین شیوه مدیریت سایزبندی و قوانین هوشمند:" : "1. Sizing Strategy & Intelligent Rules:"}</div>
                             <div className="grid sm:grid-cols-3 gap-3">
                               <button
                                 type="button"
                                 onClick={() => setProdFormTemplateOption('template')}
-                                className={`p-3 rounded-xl border text-center transition-all ${
+                                className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                                   prodFormTemplateOption === 'template'
                                     ? 'bg-sky-500/10 border-sky-500 text-sky-400 font-extrabold shadow-md'
-                                    : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60'
+                                    : (darkMode ? 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60' : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100')
                                 }`}
                               >
                                 <div className="text-xs font-black">{isRtl ? "استفاده از قالب‌های آماده" : "Select Existing Template"}</div>
@@ -1999,10 +2011,10 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                               <button
                                 type="button"
                                 onClick={() => setProdFormTemplateOption('new_template')}
-                                className={`p-3 rounded-xl border text-center transition-all ${
+                                className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                                   prodFormTemplateOption === 'new_template'
                                     ? 'bg-sky-500/10 border-sky-500 text-sky-400 font-extrabold shadow-md'
-                                    : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60'
+                                    : (darkMode ? 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60' : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100')
                                 }`}
                               >
                                 <div className="text-xs font-black">{isRtl ? "ساخت و تخصیص قالب جدید" : "Create & Assign Template"}</div>
@@ -2012,10 +2024,10 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                               <button
                                 type="button"
                                 onClick={() => setProdFormTemplateOption('custom')}
-                                className={`p-3 rounded-xl border text-center transition-all ${
+                                className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                                   prodFormTemplateOption === 'custom'
                                     ? 'bg-sky-500/10 border-sky-500 text-sky-400 font-extrabold shadow-md'
-                                    : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60'
+                                    : (darkMode ? 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:bg-neutral-900/60' : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-100')
                                 }`}
                               >
                                 <div className="text-xs font-black">{isRtl ? "مقادیر اختصاصی محصول" : "Custom rules for item"}</div>
@@ -2025,11 +2037,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                             {prodFormTemplateOption === 'template' && (
                               <div className="space-y-3 pt-2">
-                                <label className="block text-xs font-bold text-neutral-300">{isRtl ? "الگوی سایزبندی آماده را انتخاب کنید:" : "Choose a template profile:"}</label>
+                                <label className={`block text-xs font-bold ${darkMode ? 'text-neutral-300' : 'text-neutral-700'}`}>{isRtl ? "الگوی سایزبندی آماده را انتخاب کنید:" : "Choose a template profile:"}</label>
                                 <select
                                   value={prodFormTemplateId || ''}
                                   onChange={(e) => setProdFormTemplateId(e.target.value)}
-                                  className="w-full px-3 py-2.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                  className={`w-full px-3 py-2.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 border ${darkMode ? 'bg-neutral-950 border-neutral-800 text-neutral-300' : 'bg-white border-neutral-200 text-neutral-900'}`}
                                 >
                                   <option value="">{isRtl ? "-- انتخاب قالب --" : "-- Choose Sizing Template --"}</option>
                                   {templatesList.map(tpl => (
@@ -2038,7 +2050,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                 </select>
 
                                 {prodFormTemplateId && (
-                                  <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-3">
+                                  <div className={`p-4 rounded-xl border space-y-3 ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200 shadow-sm'}`}>
                                     <div className="text-xs font-black text-sky-400 flex items-center gap-1.5">
                                       <Ruler className="w-3.5 h-3.5" />
                                       <span>{isRtl ? "قوانین اندازه‌گیری پیش‌نمایش قالب:" : "Preview of template rules:"}</span>
@@ -2053,9 +2065,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                         return selectedTpl.measurements.map((m, idx) => {
                                           const sizeName = sizes.find(s => s.id === m.size_id)?.name || `Size ID: ${m.size_id}`;
                                           return (
-                                            <div key={idx} className="flex items-center justify-between text-[11px] p-2 bg-neutral-900 rounded-lg border border-neutral-800/60">
+                                            <div key={idx} className={`flex items-center justify-between text-[11px] p-2 rounded-lg border ${darkMode ? 'bg-neutral-900 border-neutral-800/60' : 'bg-neutral-50 border-neutral-200'}`}>
                                               <span className="font-bold text-sky-400 bg-sky-600/10 px-2.5 py-0.5 rounded-md border border-sky-500/15">{sizeName}</span>
-                                              <span className="text-neutral-300 font-extrabold">
+                                              <span className={`font-extrabold ${darkMode ? 'text-neutral-300' : 'text-neutral-700'}`}>
                                                 {isRtl ? `قد: ${m.min_height} تا ${m.max_height} سم` : `Height: ${m.min_height} - ${m.max_height} cm`} | 
                                                 {isRtl ? ` وزن: ${m.min_weight} تا ${m.max_weight} کگ` : ` Weight: ${m.min_weight} - ${m.max_weight} kg`}
                                               </span>
@@ -2073,14 +2085,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             )}
 
                             {prodFormTemplateOption === 'new_template' && (
-                              <div className="space-y-3 pt-2 border-t border-neutral-800/40">
-                                <label className="block text-xs font-bold text-neutral-300">{isRtl ? "نام قالب سایزبندی جدید عمومی:" : "New Sizing Template Profile Name:"}</label>
+                              <div className={`space-y-3 pt-2 border-t ${darkMode ? 'border-neutral-800/40' : 'border-neutral-200'}`}>
+                                <label className={`block text-xs font-bold ${darkMode ? 'text-neutral-300' : 'text-neutral-700'}`}>{isRtl ? "نام قالب سایزبندی جدید عمومی:" : "New Sizing Template Profile Name:"}</label>
                                 <input
                                   type="text"
                                   placeholder={isRtl ? "مثلا: استاندارد تی‌شرت لش" : "e.g., Standard Oversized Tees"}
                                   value={newTemplateName}
                                   onChange={(e) => setNewTemplateName(e.target.value)}
-                                  className="w-full px-3 py-2.5 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                  className={`w-full px-3 py-2.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 border ${darkMode ? 'bg-neutral-950 border-neutral-800 text-neutral-300' : 'bg-white border-neutral-200 text-neutral-900'}`}
                                 />
                               </div>
                             )}
@@ -2117,7 +2129,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                         className={`p-4 rounded-xl border transition-all ${
                                           cell.enabled 
                                             ? 'bg-sky-500/5 border-sky-500/20' 
-                                            : 'bg-neutral-900/10 border-neutral-800 opacity-60'
+                                            : (darkMode ? 'bg-neutral-900/10 border-neutral-800 opacity-60' : 'bg-neutral-100 border-neutral-200 opacity-60')
                                         }`}
                                       >
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -2131,9 +2143,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                 type="checkbox"
                                                 checked={cell.enabled}
                                                 onChange={(e) => handleSizeGuideCellChange(sz.id, 'enabled', null, e.target.checked)}
-                                                className="rounded border-neutral-700 bg-neutral-900 text-sky-600 focus:ring-sky-500 w-4 h-4"
+                                                className={`rounded text-sky-600 focus:ring-sky-500 w-4 h-4 ${darkMode ? 'border-neutral-700 bg-neutral-900' : 'border-neutral-300 bg-white'}`}
                                               />
-                                              <span className="text-xs font-black text-neutral-300">
+                                              <span className={`text-xs font-black ${darkMode ? 'text-neutral-300' : 'text-neutral-700'}`}>
                                                 {cell.enabled ? (isRtl ? "راهنما فعال است" : "Active Guide") : (isRtl ? "فاقد بازه علمی" : "No rules")}
                                               </span>
                                             </label>
@@ -2144,51 +2156,51 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                               <div className="grid sm:grid-cols-3 gap-6">
                                                 {/* Height bounds */}
                                                 <div className="space-y-1.5">
-                                                  <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "حدود قد مناسب (سانتی‌متر):" : "Height Range (cm):"}</span>
+                                                  <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "حدود قد مناسب (سانتی‌متر):" : "Height Range (cm):"}</span>
                                                 <div className="flex items-center gap-1.5">
                                                   <input
                                                     type="number"
                                                     value={cell.min_height}
                                                     onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_height', null, Number(e.target.value))}
-                                                    className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    className={`w-1/2 px-2 py-1 rounded text-center text-xs font-extrabold text-sky-400 border ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                   />
                                                   <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
                                                   <input
                                                     type="number"
                                                     value={cell.max_height}
                                                     onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_height', null, Number(e.target.value))}
-                                                    className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                    className={`w-1/2 px-2 py-1 rounded text-center text-xs font-extrabold text-sky-400 border ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                   />
                                                 </div>
                                               </div>
 
                                               {/* Weight bounds */}
                                               <div className="space-y-1.5">
-                                                <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "حدود وزن مناسب (کیلوگرم):" : "Weight Range (kg):"}</span>
+                                                <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "حدود وزن مناسب (کیلوگرم):" : "Weight Range (kg):"}</span>
                                                 <div className="flex items-center gap-1.5">
                                                   <input
                                                     type="number"
                                                     value={cell.min_weight}
                                                     onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_weight', null, Number(e.target.value))}
-                                                    className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-indigo-400 font-extrabold"
+                                                    className={`w-1/2 px-2 py-1 rounded text-center text-xs font-extrabold text-indigo-400 border ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                   />
                                                   <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
                                                   <input
                                                     type="number"
                                                     value={cell.max_weight}
                                                     onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_weight', null, Number(e.target.value))}
-                                                    className="w-1/2 px-2 py-1 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-indigo-400 font-extrabold"
+                                                    className={`w-1/2 px-2 py-1 rounded text-center text-xs font-extrabold text-indigo-400 border ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                   />
                                                 </div>
                                               </div>
 
                                               {/* Body shapes */}
                                               <div className="space-y-1.5">
-                                                <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "سازگاری با ساختار بدنی:" : "Compatible Body Shapes:"}</span>
+                                                <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "سازگاری با ساختار بدنی:" : "Compatible Body Shapes:"}</span>
                                                 <div className="flex flex-wrap gap-1.5">
                                                   {/* Slim */}
                                                   <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
-                                                    cell.shapes.slim ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                                    cell.shapes.slim ? 'bg-sky-600/20 border-sky-500 text-sky-400' : (darkMode ? 'border-neutral-800 text-neutral-500' : 'border-neutral-300 text-neutral-600')
                                                   }`}>
                                                     <input
                                                       type="checkbox"
@@ -2201,7 +2213,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                                                   {/* Athletic */}
                                                   <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
-                                                    cell.shapes.athletic ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                                    cell.shapes.athletic ? 'bg-sky-600/20 border-sky-500 text-sky-400' : (darkMode ? 'border-neutral-800 text-neutral-500' : 'border-neutral-300 text-neutral-600')
                                                   }`}>
                                                     <input
                                                       type="checkbox"
@@ -2214,7 +2226,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                                                   {/* Heavy */}
                                                   <label className={`px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
-                                                    cell.shapes.heavy ? 'bg-sky-600/20 border-sky-500 text-sky-400' : 'border-neutral-800 text-neutral-500'
+                                                    cell.shapes.heavy ? 'bg-sky-600/20 border-sky-500 text-sky-400' : (darkMode ? 'border-neutral-800 text-neutral-500' : 'border-neutral-300 text-neutral-600')
                                                   }`}>
                                                     <input
                                                       type="checkbox"
@@ -2234,7 +2246,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                 const prodType = getClothingTypeFromCategory(prodFormCategory, categoriesList);
                                                 if (prodType === 'footwear') {
                                                   return (
-                                                    <div className="border-t border-white/5 pt-3 mt-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div className={`border-t pt-3 mt-1 grid grid-cols-1 md:grid-cols-2 gap-3 ${darkMode ? 'border-white/5' : 'border-neutral-200'}`}>
                                                       {/* Foot Length */}
                                                       <div className="space-y-1">
                                                         <span className="text-[10px] font-bold text-sky-400 block">{isRtl ? "طول پا (سانتی‌متر):" : "Foot Length (cm):"}</span>
@@ -2245,7 +2257,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                             placeholder="Min"
                                                             value={cell.min_foot_length ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_foot_length', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-2 py-1 bg-neutral-950 border border-sky-500/30 rounded text-center text-xs text-sky-400 font-extrabold focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                                            className={`w-1/2 px-2 py-1 border border-sky-500/30 rounded text-center text-xs text-sky-400 font-extrabold focus:outline-none focus:ring-1 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950' : 'bg-white'}`}
                                                           />
                                                           <span className="text-neutral-500 text-[10px]">{isRtl ? "تا" : "to"}</span>
                                                           <input
@@ -2254,7 +2266,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                             placeholder="Max"
                                                             value={cell.max_foot_length ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_foot_length', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-2 py-1 bg-neutral-950 border border-sky-500/30 rounded text-center text-xs text-sky-400 font-extrabold focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                                            className={`w-1/2 px-2 py-1 border border-sky-500/30 rounded text-center text-xs text-sky-400 font-extrabold focus:outline-none focus:ring-1 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950' : 'bg-white'}`}
                                                           />
                                                         </div>
                                                       </div>
@@ -2264,25 +2276,25 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                                                 if (prodType === 'accessories') {
                                                   return (
-                                                    <div className="border-t border-white/5 pt-3 mt-1 text-neutral-500 text-[10px] italic">
+                                                    <div className={`border-t pt-3 mt-1 text-[10px] italic ${darkMode ? 'border-white/5 text-neutral-500' : 'border-neutral-200 text-neutral-500'}`}>
                                                       {isRtl ? "اکسسوری‌ها تک‌سایز یا فری‌سایز هستند و نیازی به ابعاد دقیق بدنی ندارند." : "Accessories do not require specific body dimensions."}
                                                     </div>
                                                   );
                                                 }
 
                                                 return (
-                                                  <div className="border-t border-white/5 pt-3 mt-1 grid grid-cols-2 md:grid-cols-6 gap-3">
+                                                  <div className={`border-t pt-3 mt-1 grid grid-cols-2 md:grid-cols-6 gap-3 ${darkMode ? 'border-white/5' : 'border-neutral-200'}`}>
                                                     {/* Chest (Tops, One-Piece) */}
                                                     {(prodType === 'tops' || prodType === 'one_piece') && (
                                                       <div className="space-y-1">
-                                                        <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور سینه:" : "Chest:"}</span>
+                                                        <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "دور سینه:" : "Chest:"}</span>
                                                         <div className="flex items-center gap-1">
                                                           <input
                                                             type="number"
                                                             placeholder="Min"
                                                             value={cell.min_chest ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_chest', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                           <span className="text-neutral-500 text-[10px]">-</span>
                                                           <input
@@ -2290,7 +2302,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                             placeholder="Max"
                                                             value={cell.max_chest ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_chest', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                         </div>
                                                       </div>
@@ -2299,14 +2311,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                     {/* Waist (Bottoms, One-Piece) */}
                                                     {(prodType === 'bottoms' || prodType === 'one_piece') && (
                                                       <div className="space-y-1">
-                                                        <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور کمر:" : "Waist:"}</span>
+                                                        <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "دور کمر:" : "Waist:"}</span>
                                                         <div className="flex items-center gap-1">
                                                           <input
                                                             type="number"
                                                             placeholder="Min"
                                                             value={cell.min_waist ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_waist', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                           <span className="text-neutral-500 text-[10px]">-</span>
                                                           <input
@@ -2314,7 +2326,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                             placeholder="Max"
                                                             value={cell.max_waist ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_waist', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                         </div>
                                                       </div>
@@ -2323,14 +2335,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                     {/* Hip (Bottoms, One-Piece) */}
                                                     {(prodType === 'bottoms' || prodType === 'one_piece') && (
                                                       <div className="space-y-1">
-                                                        <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "دور باسن:" : "Hips:"}</span>
+                                                        <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "دور باسن:" : "Hips:"}</span>
                                                         <div className="flex items-center gap-1">
                                                           <input
                                                             type="number"
                                                             placeholder="Min"
                                                             value={cell.min_hip ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_hip', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                           <span className="text-neutral-500 text-[10px]">-</span>
                                                           <input
@@ -2338,7 +2350,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                             placeholder="Max"
                                                             value={cell.max_hip ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_hip', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                         </div>
                                                       </div>
@@ -2347,14 +2359,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                     {/* Shoulder (Tops) */}
                                                     {prodType === 'tops' && (
                                                       <div className="space-y-1">
-                                                        <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "سرشانه:" : "Shoulder:"}</span>
+                                                        <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "سرشانه:" : "Shoulder:"}</span>
                                                         <div className="flex items-center gap-1">
                                                           <input
                                                             type="number"
                                                             placeholder="Min"
                                                             value={cell.min_shoulder ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_shoulder', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                           <span className="text-neutral-500 text-[10px]">-</span>
                                                           <input
@@ -2362,7 +2374,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                             placeholder="Max"
                                                             value={cell.max_shoulder ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_shoulder', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                         </div>
                                                       </div>
@@ -2371,14 +2383,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                     {/* Sleeve (Tops) */}
                                                     {prodType === 'tops' && (
                                                       <div className="space-y-1">
-                                                        <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? "قد آستین:" : "Sleeve:"}</span>
+                                                        <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "قد آستین:" : "Sleeve:"}</span>
                                                         <div className="flex items-center gap-1">
                                                           <input
                                                             type="number"
                                                             placeholder="Min"
                                                             value={cell.min_sleeve ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_sleeve', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                           <span className="text-neutral-500 text-[10px]">-</span>
                                                           <input
@@ -2386,7 +2398,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                             placeholder="Max"
                                                             value={cell.max_sleeve ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_sleeve', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                         </div>
                                                       </div>
@@ -2395,14 +2407,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                     {/* Length (Tops, Bottoms, One-Piece) */}
                                                     {(prodType === 'tops' || prodType === 'bottoms' || prodType === 'one_piece') && (
                                                       <div className="space-y-1">
-                                                        <span className="text-[10px] font-bold text-neutral-400 block">{isRtl ? (prodType === 'bottoms' ? "قد شلوار:" : "قد لباس:") : "Length:"}</span>
+                                                        <span className={`text-[10px] font-bold block ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? (prodType === 'bottoms' ? "قد شلوار:" : "قد لباس:") : "Length:"}</span>
                                                         <div className="flex items-center gap-1">
                                                           <input
                                                             type="number"
                                                             placeholder="Min"
                                                             value={cell.min_length ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'min_length', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                           <span className="text-neutral-500 text-[10px]">-</span>
                                                           <input
@@ -2410,7 +2422,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                             placeholder="Max"
                                                             value={cell.max_length ?? ''}
                                                             onChange={(e) => handleSizeGuideCellChange(sz.id, 'max_length', null, e.target.value ? Number(e.target.value) : undefined)}
-                                                            className="w-1/2 px-1 py-0.5 bg-neutral-950 border border-neutral-800 rounded text-center text-xs text-sky-400 font-extrabold"
+                                                            className={`w-1/2 px-1 py-0.5 border rounded text-center text-xs text-sky-400 font-extrabold ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}
                                                           />
                                                         </div>
                                                       </div>
@@ -2432,11 +2444,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             </div>
                           )}
 
-                          <div className="flex justify-end pt-4 border-t border-neutral-800/40">
+                          <div className={`flex justify-end pt-4 border-t ${darkMode ? 'border-neutral-800/40' : 'border-neutral-200'}`}>
                             <button
                               onClick={saveProductSizeGuides}
                               disabled={savingSizeGuides}
-                              className="px-8 py-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg flex items-center gap-2"
+                              className="px-8 py-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg flex items-center gap-2 cursor-pointer transition-all"
                             >
                               {savingSizeGuides ? (
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -2464,15 +2476,15 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                           </div>
 
                           {/* 2D Grid Representation for Chosen Items */}
-                          <div className="overflow-x-auto rounded-xl border border-neutral-800">
+                          <div className={`overflow-x-auto rounded-xl border ${darkMode ? 'border-neutral-800' : 'border-neutral-200 bg-white'}`}>
                             <table className="w-full text-xs text-center border-collapse">
                               <thead>
-                                <tr className="bg-neutral-950/40 border-b border-neutral-800">
-                                  <th className="p-4 border-r border-neutral-800 font-black text-neutral-400">{t.colors} / {t.sizes}</th>
+                                <tr className={`border-b ${darkMode ? 'bg-neutral-950/40 border-neutral-800' : 'bg-neutral-100 border-neutral-200'}`}>
+                                  <th className={`p-4 border-r font-black ${darkMode ? 'border-neutral-800 text-neutral-400' : 'border-neutral-200 text-neutral-600'}`}>{t.colors} / {t.sizes}</th>
                                   {sizes
                                     .filter(sz => selectedSizeIds.includes(sz.id))
                                     .map(sz => (
-                                      <th key={sz.id} className="p-4 font-black border-r border-neutral-800 text-sky-400">
+                                      <th key={sz.id} className={`p-4 font-black border-r text-sky-400 ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
                                         <span className="text-sm font-bold block">{sz.name}</span>
                                       </th>
                                     ))}
@@ -2482,12 +2494,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                 {colors
                                   .filter(col => selectedColorIds.includes(col.id))
                                   .map(col => (
-                                    <tr key={col.id} className="border-b border-neutral-800/80 hover:bg-neutral-900/10 transition-colors">
-                                      <td className="p-4 border-r border-neutral-800 text-right font-extrabold flex items-center gap-3 min-w-[150px]">
-                                        <span className="w-4 h-4 rounded-full border border-neutral-700 shrink-0" style={{ backgroundColor: col.hex_code }} />
+                                    <tr key={col.id} className={`border-b transition-colors ${darkMode ? 'border-neutral-800/80 hover:bg-neutral-900/10' : 'border-neutral-200 hover:bg-neutral-50'}`}>
+                                      <td className={`p-4 border-r text-right font-extrabold flex items-center gap-3 min-w-[150px] ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
+                                        <span className="w-4 h-4 rounded-full border border-neutral-400 shrink-0" style={{ backgroundColor: col.hex_code }} />
                                         <div>
-                                          <p className="font-bold">{isRtl ? col.name_fa : col.name_en}</p>
-                                          <code className="text-[9px] text-neutral-500 font-mono tracking-wider uppercase">{col.hex_code}</code>
+                                          <p className={`font-bold ${darkMode ? 'text-white' : 'text-neutral-900'}`}>{isRtl ? col.name_fa : col.name_en}</p>
+                                          <code className="text-[9px] text-neutral-400 font-mono tracking-wider uppercase">{col.hex_code}</code>
                                         </div>
                                       </td>
 
@@ -2498,21 +2510,21 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                           const cell = matrixGridState[key] || { stock: 0, price: isEditingProd.base_price, enabled: false };
 
                                           return (
-                                            <td key={sz.id} className={`p-3 border-r border-neutral-800 min-w-[140px] transition-all ${cell.enabled ? 'bg-sky-500/5' : 'bg-neutral-950/10 opacity-60'}`}>
+                                            <td key={sz.id} className={`p-3 border-r min-w-[140px] transition-all ${darkMode ? 'border-neutral-800' : 'border-neutral-200'} ${cell.enabled ? 'bg-sky-500/5' : (darkMode ? 'bg-neutral-950/10 opacity-60' : 'bg-neutral-50 opacity-60')}`}>
                                               <div className="space-y-2 text-center">
                                                 <label className="inline-flex items-center gap-1.5 cursor-pointer">
                                                   <input
                                                     type="checkbox"
                                                     checked={cell.enabled}
                                                     onChange={(e) => handleCellChange(col.id, sz.id, 'enabled', e.target.checked)}
-                                                    className="rounded border-neutral-700 bg-neutral-900 text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                                                    className={`rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5 ${darkMode ? 'border-neutral-700 bg-neutral-900' : 'border-neutral-300 bg-white'}`}
                                                   />
-                                                  <span className="text-[10px] font-extrabold text-neutral-400">{cell.enabled ? t.in_stock : t.out_of_stock}</span>
+                                                  <span className={`text-[10px] font-extrabold ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{cell.enabled ? t.in_stock : t.out_of_stock}</span>
                                                 </label>
 
                                                 {cell.enabled && (
                                                   <div className="space-y-1">
-                                                    <div className="flex items-center gap-1 bg-neutral-950 border border-neutral-800 rounded-md px-1.5 py-1">
+                                                    <div className={`flex items-center gap-1 border rounded-md px-1.5 py-1 ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                                                       <span className="text-[9px] text-neutral-500 shrink-0">{t.stock}:</span>
                                                       <input
                                                         type="number"
@@ -2522,13 +2534,13 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                                       />
                                                     </div>
 
-                                                    <div className="flex items-center gap-1 bg-neutral-950 border border-neutral-800 rounded-md px-1.5 py-1">
+                                                    <div className={`flex items-center gap-1 border rounded-md px-1.5 py-1 ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                                                       <span className="text-[9px] text-neutral-500 shrink-0">$</span>
                                                       <input
                                                         type="number"
                                                         value={cell.price}
                                                         onChange={(e) => handleCellChange(col.id, sz.id, 'price', e.target.value)}
-                                                        className="w-full bg-transparent text-center focus:outline-none text-[11px] font-bold"
+                                                        className={`w-full bg-transparent text-center focus:outline-none text-[11px] font-bold ${darkMode ? 'text-white' : 'text-neutral-900'}`}
                                                         placeholder={isEditingProd.base_price.toString()}
                                                       />
                                                     </div>
@@ -2544,11 +2556,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             </table>
                           </div>
 
-                          <div className="flex justify-end pt-4 border-t border-neutral-800/40">
+                          <div className={`flex justify-end pt-4 border-t ${darkMode ? 'border-neutral-800/40' : 'border-neutral-200'}`}>
                             <button
                               onClick={saveProductMatrix}
                               disabled={savingMatrix}
-                              className="px-8 py-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg flex items-center gap-2"
+                              className="px-8 py-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg flex items-center gap-2 cursor-pointer transition-all"
                             >
                               {savingMatrix ? (
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -2599,24 +2611,24 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                   {/* Table Inventory Grid */}
                   {filteredWarehouseItems.length === 0 ? (
-                    <div className="text-center py-20 border border-dashed border-neutral-800 rounded-2xl bg-neutral-900/10">
-                      <Warehouse className="w-12 h-12 text-neutral-600 mx-auto mb-4" />
-                      <p className="text-sm font-bold text-neutral-400">
+                    <div className={`text-center py-20 border border-dashed rounded-2xl ${darkMode ? 'border-neutral-800 bg-neutral-900/10' : 'border-neutral-200 bg-neutral-50'}`}>
+                      <Warehouse className="w-12 h-12 text-neutral-500 mx-auto mb-4" />
+                      <p className={`text-sm font-bold ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                         {isRtl ? "هیچ متغیر انبار منطبقی یافت نشد." : "No matching inventory records found."}
                       </p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-900/10">
+                    <div className={`overflow-x-auto rounded-2xl border ${darkMode ? 'border-neutral-800 bg-neutral-900/10' : 'border-neutral-200 bg-white shadow-sm'}`}>
                       {/* Desktop Table View */}
                       <table className="w-full text-xs text-center border-collapse hidden sm:table">
                         <thead>
-                          <tr className="bg-neutral-950/40 border-b border-neutral-800">
-                            <th className="p-4 text-right text-neutral-400 font-bold">{isRtl ? "کالای پوشاک" : "Garment Profile"}</th>
-                            <th className="p-4 font-bold text-neutral-400">{isRtl ? "رنگ" : "Color"}</th>
-                            <th className="p-4 font-bold text-neutral-400">{isRtl ? "سایز" : "Size"}</th>
-                            <th className="p-4 font-bold text-neutral-400">{isRtl ? "موجودی انبار" : "Stock level"}</th>
-                            <th className="p-4 font-bold text-neutral-400">{isRtl ? "قیمت تنوع (تومان)" : "Override Price"}</th>
-                            <th className="p-4 font-bold text-neutral-400">{isRtl ? "عملیات سریع" : "Action"}</th>
+                          <tr className={`border-b ${darkMode ? 'bg-neutral-950/40 border-neutral-800 text-neutral-400' : 'bg-neutral-100 border-neutral-200 text-neutral-700'}`}>
+                            <th className="p-4 text-right font-bold">{isRtl ? "کالای پوشاک" : "Garment Profile"}</th>
+                            <th className="p-4 font-bold">{isRtl ? "رنگ" : "Color"}</th>
+                            <th className="p-4 font-bold">{isRtl ? "سایز" : "Size"}</th>
+                            <th className="p-4 font-bold">{isRtl ? "موجودی انبار" : "Stock level"}</th>
+                            <th className="p-4 font-bold">{isRtl ? "قیمت تنوع (تومان)" : "Override Price"}</th>
+                            <th className="p-4 font-bold">{isRtl ? "عملیات سریع" : "Action"}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2634,30 +2646,30 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             const isModified = currentLocalStock !== item.stock || currentLocalPrice !== item.price;
 
                             return (
-                              <tr key={item.id} className="border-b border-neutral-800/60 hover:bg-neutral-900/10 transition-colors">
+                              <tr key={item.id} className={`border-b transition-colors ${darkMode ? 'border-neutral-800/60 hover:bg-neutral-900/10' : 'border-neutral-200 hover:bg-neutral-50'}`}>
                                 {/* Product name & photo */}
                                 <td className="p-3 text-right">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-neutral-950/20 rounded-lg overflow-hidden shrink-0">
+                                    <div className={`w-10 h-10 rounded-lg overflow-hidden shrink-0 border ${darkMode ? 'bg-neutral-950/20 border-neutral-800' : 'bg-neutral-100 border-neutral-200'}`}>
                                       {matchedProd.image ? (
                                         <img src={matchedProd.image} alt="Thumbnail" className="w-full h-full object-cover" />
                                       ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-neutral-500">
+                                        <div className="w-full h-full flex items-center justify-center text-neutral-400">
                                           <Package className="w-4 h-4" />
                                         </div>
                                       )}
                                     </div>
                                     <div>
-                                      <p className="font-extrabold text-neutral-200">{isRtl ? matchedProd.name_fa : matchedProd.name_en}</p>
-                                      <span className="text-[9px] text-neutral-500 px-1 py-0.2 bg-neutral-950/30 rounded inline-block mt-0.5">{matchedProd.category}</span>
+                                      <p className={`font-extrabold ${darkMode ? 'text-neutral-200' : 'text-neutral-900'}`}>{isRtl ? matchedProd.name_fa : matchedProd.name_en}</p>
+                                      <span className={`text-[9px] px-1 py-0.2 rounded inline-block mt-0.5 font-bold ${darkMode ? 'bg-neutral-950/30 text-neutral-400' : 'bg-neutral-100 text-neutral-600'}`}>{matchedProd.category}</span>
                                     </div>
                                   </div>
                                 </td>
 
                                 {/* Color column */}
                                 <td className="p-3">
-                                  <div className="inline-flex items-center gap-2 px-2 py-1 rounded bg-neutral-900/30 border border-neutral-800 text-[10px] font-bold">
-                                    <span className="w-3 h-3 rounded-full border border-neutral-800" style={{ backgroundColor: matchedCol?.hex_code }} />
+                                  <div className={`inline-flex items-center gap-2 px-2 py-1 rounded border text-[10px] font-bold ${darkMode ? 'bg-neutral-900/30 border-neutral-800 text-neutral-300' : 'bg-neutral-50 border-neutral-200 text-neutral-800'}`}>
+                                    <span className="w-3 h-3 rounded-full border border-neutral-400 shadow-sm" style={{ backgroundColor: matchedCol?.hex_code }} />
                                     <span>{isRtl ? matchedCol?.name_fa : matchedCol?.name_en}</span>
                                   </div>
                                 </td>
@@ -2676,9 +2688,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                       type="number"
                                       value={currentLocalStock}
                                       onChange={(e) => handleWarehouseLocalChange(item.id, 'stock', e.target.value)}
-                                      className={`w-16 px-2 py-1 text-center font-extrabold text-xs rounded border bg-neutral-950 border-neutral-800 focus:outline-none focus:ring-1 focus:ring-sky-500 ${isModified ? 'text-sky-400' : 'text-neutral-300'}`}
+                                      className={`w-16 px-2 py-1 text-center font-extrabold text-xs rounded border focus:outline-none focus:ring-1 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'} ${isModified ? 'text-sky-400' : (darkMode ? 'text-neutral-300' : 'text-neutral-800')}`}
                                     />
-                                    <span className="text-[9px] text-neutral-500">{isRtl ? "عدد" : "pcs"}</span>
+                                    <span className={`text-[9px] font-semibold ${darkMode ? 'text-neutral-500' : 'text-neutral-600'}`}>{isRtl ? "عدد" : "pcs"}</span>
                                   </div>
                                 </td>
 
@@ -2689,7 +2701,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                       type="number"
                                       value={currentLocalPrice}
                                       onChange={(e) => handleWarehouseLocalChange(item.id, 'price', e.target.value)}
-                                      className={`w-28 px-2 py-1 text-center font-bold text-xs rounded border bg-neutral-950 border-neutral-800 focus:outline-none focus:ring-1 focus:ring-sky-500 ${isModified ? 'text-indigo-400' : 'text-neutral-300'}`}
+                                      className={`w-28 px-2 py-1 text-center font-bold text-xs rounded border focus:outline-none focus:ring-1 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'} ${isModified ? 'text-indigo-400' : (darkMode ? 'text-neutral-300' : 'text-neutral-800')}`}
                                     />
                                   </div>
                                 </td>
@@ -2701,8 +2713,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                     disabled={updatingWarehouseId === item.id}
                                     className={`py-1.5 px-3.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 mx-auto ${
                                       isModified 
-                                        ? 'bg-sky-600 hover:bg-sky-500 text-white shadow shadow-sky-600/10' 
-                                        : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700/40'
+                                        ? 'bg-sky-600 hover:bg-sky-500 text-white shadow shadow-sky-600/10 cursor-pointer' 
+                                        : (darkMode ? 'bg-neutral-800 text-neutral-500 border border-neutral-700/40 cursor-not-allowed' : 'bg-neutral-100 text-neutral-400 border border-neutral-200 cursor-not-allowed')
                                     }`}
                                   >
                                     {updatingWarehouseId === item.id ? (
@@ -2851,8 +2863,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                   </div>
 
                   {editingTemplate ? (
-                    <div className="p-6 bg-neutral-900/40 border border-neutral-800 rounded-2xl space-y-6">
-                      <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+                    <div className={`p-6 border rounded-2xl space-y-6 ${darkMode ? 'bg-neutral-900/40 border-neutral-800' : 'bg-white border-neutral-200 shadow-md'}`}>
+                      <div className={`flex items-center justify-between border-b pb-4 ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
                         <h4 className="text-sm font-extrabold text-sky-400 flex items-center gap-2">
                           <Ruler className="w-4 h-4" />
                           <span>
@@ -2863,7 +2875,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                         </h4>
                         <button
                           onClick={() => setEditingTemplate(null)}
-                          className="p-1 text-neutral-400 hover:text-neutral-200"
+                          className={`p-1 ${darkMode ? 'text-neutral-400 hover:text-neutral-200' : 'text-neutral-500 hover:text-neutral-800'}`}
                         >
                           <X className="w-5 h-5" />
                         </button>
@@ -2872,23 +2884,23 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-xs font-bold text-neutral-400 mb-1">{isRtl ? "نام قالب (مثلا: هودی لش قواره بزرگ)" : "Template Name:"}</label>
+                            <label className={`block text-xs font-bold mb-1 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "نام قالب (مثلا: هودی لش قواره بزرگ)" : "Template Name:"}</label>
                             <input
                               type="text"
                               required
                               placeholder={isRtl ? "نام توصیفی قالب" : "Descriptive template name"}
                               value={templateFormName}
                               onChange={(e) => setTemplateFormName(e.target.value)}
-                              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                              className={`w-full px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950 border border-neutral-800 text-neutral-300' : 'bg-white border border-neutral-300 text-neutral-900'}`}
                             />
                           </div>
 
                           <div>
-                            <label className="block text-xs font-bold text-neutral-400 mb-1">{isRtl ? "نوع پوشاک / دسته‌بندی اصلی:" : "Clothing Type / Main Category:"}</label>
+                            <label className={`block text-xs font-bold mb-1 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "نوع پوشاک / دسته‌بندی اصلی:" : "Clothing Type / Main Category:"}</label>
                             <select
                               value={templateFormClothingType}
                               onChange={(e) => setTemplateFormClothingType(e.target.value as any)}
-                              className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-xs text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500 font-extrabold"
+                              className={`w-full px-3 py-2 rounded-lg text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950 border border-neutral-800 text-neutral-300' : 'bg-white border border-neutral-300 text-neutral-900'}`}
                             >
                               <option value="tops">{isRtl ? "بالاتنه (تیشرت، هودی، پیراهن، کت)" : "Tops (T-shirt, Hoodie, Shirt, Jacket)"}</option>
                               <option value="bottoms">{isRtl ? "پایین‌تنه (شلوار، شلوارک، جین، لگ)" : "Bottoms (Pants, Shorts, Jeans, Leggings)"}</option>
@@ -3314,16 +3326,16 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                   ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {templatesList.length === 0 ? (
-                        <div className="col-span-full p-12 text-center bg-neutral-900/10 border border-neutral-800 rounded-2xl italic text-xs text-neutral-500 font-extrabold">
+                        <div className={`col-span-full p-12 text-center border rounded-2xl italic text-xs font-extrabold ${darkMode ? 'bg-neutral-900/10 border-neutral-800 text-neutral-500' : 'bg-neutral-50 border-neutral-200 text-neutral-600'}`}>
                           {isRtl ? "هیچ قالب سایزبندی تعریف نشده است. برای تخصیص آسان به پوشاک، اولین قالب را همین حالا بسازید!" : "No reusable templates registered yet. Create one to assign specs in bulk!"}
                         </div>
                       ) : (
                         templatesList.map(tpl => (
-                          <div key={tpl.id} className="p-5 bg-neutral-900/50 border border-neutral-800 rounded-2xl flex flex-col justify-between gap-4">
+                          <div key={tpl.id} className={`p-5 border rounded-2xl flex flex-col justify-between gap-4 ${darkMode ? 'bg-neutral-900/50 border-neutral-800' : 'bg-white border-neutral-200 shadow-sm'}`}>
                             <div>
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <h4 className="text-xs font-black text-neutral-200">{tpl.name}</h4>
+                                  <h4 className={`text-xs font-black ${darkMode ? 'text-neutral-200' : 'text-neutral-900'}`}>{tpl.name}</h4>
                                   <span className="inline-block mt-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400">
                                     {tpl.clothing_type_slug === 'footwear' ? (isRtl ? 'کفش' : 'Footwear') :
                                      tpl.clothing_type_slug === 'bottoms' ? (isRtl ? 'پایین‌تنه' : 'Bottoms') :
@@ -3367,7 +3379,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                       });
                                       setTemplateFormState(formState);
                                     }}
-                                    className="p-1.5 bg-neutral-800/60 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-sky-400 transition-all"
+                                    className={`p-1.5 rounded-lg transition-all ${darkMode ? 'bg-neutral-800/60 hover:bg-neutral-800 text-neutral-400 hover:text-sky-400' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-sky-600'}`}
                                     title={isRtl ? "ویرایش قالب" : "Edit template"}
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
@@ -3385,7 +3397,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                         }
                                       }
                                     }}
-                                    className="p-1.5 bg-neutral-800/60 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-red-400 transition-all"
+                                    className={`p-1.5 rounded-lg transition-all ${darkMode ? 'bg-neutral-800/60 hover:bg-neutral-800 text-neutral-400 hover:text-red-400' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-red-600'}`}
                                     title={isRtl ? "حذف قالب" : "Delete template"}
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -3394,14 +3406,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                               </div>
 
                               <div className="mt-4 space-y-2">
-                                <div className="text-[10px] font-bold text-neutral-500">{isRtl ? "قوانین فعال سایزها:" : "Active Size Rules:"}</div>
+                                <div className={`text-[10px] font-bold ${darkMode ? 'text-neutral-500' : 'text-neutral-600'}`}>{isRtl ? "قوانین فعال سایزها:" : "Active Size Rules:"}</div>
                                 <div className="grid gap-1">
                                   {tpl.measurements?.map((m, idx) => {
                                     const szName = sizes.find(s => s.id === m.size_id)?.name || `ID: ${m.size_id}`;
                                     return (
-                                      <div key={idx} className="flex items-center justify-between text-[10px] px-2 py-1 bg-neutral-950 rounded border border-neutral-800/40">
+                                      <div key={idx} className={`flex items-center justify-between text-[10px] px-2 py-1 rounded border ${darkMode ? 'bg-neutral-950 border-neutral-800/40' : 'bg-neutral-50 border-neutral-200'}`}>
                                         <span className="font-extrabold text-sky-400">{szName}</span>
-                                        <span className="text-neutral-400 font-semibold">{m.min_height}-{m.max_height}cm | {m.min_weight}-{m.max_weight}kg</span>
+                                        <span className={`font-semibold ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{m.min_height}-{m.max_height}cm | {m.min_weight}-{m.max_weight}kg</span>
                                       </div>
                                     );
                                   })}
@@ -3430,7 +3442,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                   <div className="grid gap-6 lg:grid-cols-12">
                     {/* Add Category Form */}
-                    <div className="lg:col-span-5 bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
+                    <div className={`lg:col-span-5 border rounded-2xl p-6 shadow-xl space-y-4 ${darkMode ? 'bg-neutral-900/40 backdrop-blur-md border-white/10' : 'bg-white border-neutral-200'}`}>
                       <h4 className="text-sm font-extrabold text-sky-400 flex items-center gap-2">
                         <Plus className="w-4 h-4" />
                         <span>{isRtl ? "ایجاد دسته‌بندی جدید" : "Create New Category"}</span>
@@ -3438,7 +3450,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                       <form onSubmit={handleCreateCategory} className="space-y-4">
                         <div>
-                          <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                          <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                             {isRtl ? "نام دسته‌بندی (مثال: کفش ورزشی یا شلوار جین):" : "Category Name (e.g. Sneakers or Denim):"}
                           </label>
                           <input
@@ -3447,12 +3459,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             placeholder={isRtl ? "مثال: کفش و کتانی" : "e.g. Footwear"}
                             value={newCatName}
                             onChange={(e) => setNewCatName(e.target.value)}
-                            className="w-full px-3 py-2 bg-neutral-950/80 border border-white/10 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            className={`w-full px-3 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950/80 border border-white/10 text-neutral-200' : 'bg-neutral-50 border border-neutral-200 text-neutral-900'}`}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                          <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                             {isRtl ? "نوع ساختار پوشاک (تنظیم فرم راهنمای سایز):" : "Clothing Structure Type (Determines Size Guide Inputs):"}
                           </label>
                           <select
@@ -3466,7 +3478,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                               else if (slug === 'accessories') setNewCatSystemType(4);
                               else setNewCatSystemType(1);
                             }}
-                            className="w-full px-3 py-2 bg-neutral-950/80 border border-white/10 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            className={`w-full px-3 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950/80 border border-white/10 text-neutral-200' : 'bg-neutral-50 border border-neutral-200 text-neutral-900'}`}
                           >
                             <option value="tops">{isRtl ? "بالاتنه (تیشرت، هودی، پیراهن، کت، کاپشن)" : "Tops (T-Shirts, Hoodies, Shirts, Jackets)"}</option>
                             <option value="bottoms">{isRtl ? "پایین‌تنه (شلوار، شورت، دامن)" : "Bottoms (Pants, Shorts, Skirts)"}</option>
@@ -3494,9 +3506,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                     </div>
 
                     {/* Existing Categories List */}
-                    <div className="lg:col-span-7 bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
-                      <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                        <h4 className="text-xs font-black text-neutral-400">
+                    <div className={`lg:col-span-7 border rounded-2xl p-6 shadow-xl space-y-4 ${darkMode ? 'bg-neutral-900/40 backdrop-blur-md border-white/10' : 'bg-white border-neutral-200'}`}>
+                      <div className={`flex items-center justify-between border-b pb-3 ${darkMode ? 'border-white/5' : 'border-neutral-200'}`}>
+                        <h4 className={`text-xs font-black ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                           {isRtl ? "دسته‌بندی‌های فعال سیستم" : "Active Categories"}
                         </h4>
                         <span className="text-[10px] bg-sky-500/10 text-sky-400 font-extrabold px-2.5 py-0.5 rounded-full border border-sky-500/20">
@@ -3506,13 +3518,13 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                       <div className="grid gap-2.5">
                         {categoriesList.map(cat => (
-                          <div key={cat.id} className="flex items-center justify-between p-3 bg-neutral-950/50 border border-white/5 rounded-xl hover:border-white/10 transition-all">
+                          <div key={cat.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${darkMode ? 'bg-neutral-950/50 border-white/5 hover:border-white/10' : 'bg-neutral-50 border-neutral-200 hover:border-neutral-300'}`}>
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center">
                                 <Layers className="w-4 h-4" />
                               </div>
                               <div>
-                                <p className="text-xs font-extrabold text-neutral-200">{isRtl ? (cat.name_fa || cat.name) : cat.name}</p>
+                                <p className={`text-xs font-extrabold ${darkMode ? 'text-neutral-200' : 'text-neutral-900'}`}>{isRtl ? (cat.name_fa || cat.name) : cat.name}</p>
                                 <span className="text-[9px] font-extrabold text-indigo-400 px-1.5 py-0.2 bg-indigo-500/10 rounded border border-indigo-500/20 inline-block mt-0.5">
                                   {cat.clothing_type_slug === 'footwear' ? (isRtl ? 'کفش و پاپوش' : 'Footwear') :
                                    cat.clothing_type_slug === 'bottoms' ? (isRtl ? 'پایین‌تنه' : 'Bottoms') :
@@ -3655,7 +3667,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                   <div className="grid gap-6 lg:grid-cols-12">
                     {/* Size Creator Form Panel */}
-                    <div className="lg:col-span-4 bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl">
+                    <div className={`lg:col-span-4 border rounded-2xl p-6 shadow-xl ${darkMode ? 'bg-neutral-900/40 backdrop-blur-md border-white/10' : 'bg-white border-neutral-200'}`}>
                       <h4 className="text-sm font-extrabold text-sky-400 flex items-center gap-2 mb-4">
                         <Plus className="w-4 h-4" />
                         <span>{isRtl ? "افزودن سایز سفارشی" : "Add Custom Size"}</span>
@@ -3663,7 +3675,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                       <form onSubmit={handleCreateSize} className="space-y-4">
                         <div>
-                          <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                          <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                             {isRtl ? "عنوان سایز (مثال: Free Size یا ۳۸):" : "Size Name (e.g. Free Size or 38):"}
                           </label>
                           <input
@@ -3672,12 +3684,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             placeholder={isRtl ? "مثال: ۴۲" : "e.g. 42"}
                             value={newSizeName}
                             onChange={(e) => setNewSizeName(e.target.value)}
-                            className="w-full px-3 py-2 bg-neutral-950/80 border border-white/10 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            className={`w-full px-3 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950/80 border border-white/10 text-neutral-200' : 'bg-neutral-50 border border-neutral-200 text-neutral-900'}`}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                          <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                             {isRtl ? "ترتیب نمایش (عدد کوچک‌تر اول نمایش داده می‌شود):" : "Display Sort Order (lower numbers show first):"}
                           </label>
                           <input
@@ -3686,7 +3698,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             min="1"
                             value={newSizeSortOrder}
                             onChange={(e) => setNewSizeSortOrder(Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-neutral-950/80 border border-white/10 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono text-center"
+                            className={`w-full px-3 py-2 rounded-xl text-xs font-mono text-center focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950/80 border border-white/10 text-neutral-200' : 'bg-neutral-50 border border-neutral-200 text-neutral-900'}`}
                           />
                         </div>
 
@@ -3708,10 +3720,10 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                     </div>
 
                     {/* Sizes Listing Panel */}
-                    <div className="lg:col-span-8 bg-neutral-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl space-y-6">
+                    <div className={`lg:col-span-8 border rounded-2xl p-6 shadow-xl space-y-6 ${darkMode ? 'bg-neutral-900/40 backdrop-blur-md border-white/10' : 'bg-white border-neutral-200'}`}>
                       {/* Merchant Custom Sizes Section */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                        <div className={`flex items-center justify-between border-b pb-2 ${darkMode ? 'border-white/5' : 'border-neutral-200'}`}>
                           <h4 className="text-xs font-black text-sky-400">
                             {isRtl ? "سایزهای سفارشی شما" : "Merchant Custom Sizes"}
                           </h4>
@@ -3722,7 +3734,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                         <div className="grid gap-2.5 sm:grid-cols-2">
                           {sizes.filter(isMyCustomSize).length === 0 ? (
-                            <div className="col-span-full py-8 text-center bg-neutral-950/20 border border-white/5 rounded-xl italic text-xs text-neutral-500">
+                            <div className={`col-span-full py-8 text-center border rounded-xl italic text-xs ${darkMode ? 'bg-neutral-950/20 border-white/5 text-neutral-500' : 'bg-neutral-50 border-neutral-200 text-neutral-600'}`}>
                               {isRtl ? "هیچ سایز سفارشی هنوز اضافه نکرده‌اید." : "No custom merchant sizes defined yet."}
                             </div>
                           ) : (
@@ -3731,21 +3743,21 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                               .map(sz => (
                                 <div 
                                   key={sz.id} 
-                                  className="flex items-center justify-between p-3 bg-neutral-950/40 border border-white/5 hover:border-sky-500/30 rounded-xl transition-all group"
+                                  className={`flex items-center justify-between p-3 rounded-xl border transition-all group ${darkMode ? 'bg-neutral-950/40 border-white/5 hover:border-sky-500/30' : 'bg-neutral-50 border-neutral-200 hover:border-sky-500/40'}`}
                                 >
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center font-extrabold text-xs">
                                       {sz.name}
                                     </div>
                                     <div>
-                                      <p className="text-xs font-bold text-neutral-200">{sz.name}</p>
-                                      <p className="text-[9px] text-neutral-500 font-mono">ID: {sz.id} | {isRtl ? "ترتیب:" : "Sort:"} {sz.sort_order}</p>
+                                      <p className={`text-xs font-bold ${darkMode ? 'text-neutral-200' : 'text-neutral-900'}`}>{sz.name}</p>
+                                      <p className={`text-[9px] font-mono ${darkMode ? 'text-neutral-500' : 'text-neutral-600'}`}>ID: {sz.id} | {isRtl ? "ترتیب:" : "Sort:"} {sz.sort_order}</p>
                                     </div>
                                   </div>
 
                                   <button
                                     onClick={() => handleDeleteSize(sz.id, sz.name)}
-                                    className="p-1.5 bg-neutral-900/80 hover:bg-red-500/10 text-neutral-500 hover:text-red-400 rounded-lg border border-white/5 opacity-80 hover:opacity-100 transition-all cursor-pointer"
+                                    className={`p-1.5 rounded-lg border transition-all cursor-pointer ${darkMode ? 'bg-neutral-900/80 hover:bg-red-500/10 text-neutral-500 hover:text-red-400 border-white/5' : 'bg-white hover:bg-red-50 text-neutral-400 hover:text-red-600 border-neutral-200'}`}
                                     title={isRtl ? "حذف سایز" : "Delete size"}
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -3758,11 +3770,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
                       {/* System Default Sizes Section */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                          <h4 className="text-xs font-black text-neutral-400">
+                        <div className={`flex items-center justify-between border-b pb-2 ${darkMode ? 'border-white/5' : 'border-neutral-200'}`}>
+                          <h4 className={`text-xs font-black ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                             {isRtl ? "سایزهای پیش‌فرض و سیستمی (غیرقابل ویرایش)" : "System Default Sizes (Read-Only)"}
                           </h4>
-                          <span className="text-[10px] bg-neutral-500/10 text-neutral-400 font-extrabold px-2 py-0.5 rounded-full">
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${darkMode ? 'bg-neutral-500/10 text-neutral-400' : 'bg-neutral-200 text-neutral-600'}`}>
                             {sizes.filter(isSystemSize).length} {isRtl ? "مورد" : "items"}
                           </span>
                         </div>
@@ -3773,14 +3785,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             .map(sz => (
                               <div 
                                 key={sz.id} 
-                                className="flex items-center gap-3 p-2.5 bg-neutral-950/10 border border-white/5 rounded-xl opacity-60"
+                                className={`flex items-center gap-3 p-2.5 rounded-xl border opacity-70 ${darkMode ? 'bg-neutral-950/10 border-white/5' : 'bg-neutral-50 border-neutral-200'}`}
                               >
-                                <div className="w-7 h-7 rounded-lg bg-neutral-800 text-neutral-400 flex items-center justify-center font-extrabold text-[11px] border border-white/5">
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-[11px] border ${darkMode ? 'bg-neutral-800 text-neutral-400 border-white/5' : 'bg-neutral-200 text-neutral-700 border-neutral-300'}`}>
                                   {sz.name}
                                 </div>
                                 <div>
-                                  <p className="text-[11px] font-extrabold text-neutral-300">{sz.name}</p>
-                                  <p className="text-[8px] text-neutral-500 font-mono">{isRtl ? "ترتیب:" : "Sort:"} {sz.sort_order}</p>
+                                  <p className={`text-[11px] font-extrabold ${darkMode ? 'text-neutral-300' : 'text-neutral-800'}`}>{sz.name}</p>
+                                  <p className={`text-[8px] font-mono ${darkMode ? 'text-neutral-500' : 'text-neutral-600'}`}>{isRtl ? "ترتیب:" : "Sort:"} {sz.sort_order}</p>
                                 </div>
                               </div>
                             ))}
@@ -3834,15 +3846,15 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                   </form>
 
                   {/* Storage Adapter & Offline/Cloud Configuration Card */}
-                  <div className="pt-6 border-t border-white/10 space-y-4">
+                  <div className={`pt-6 border-t space-y-4 ${darkMode ? 'border-white/10' : 'border-neutral-200'}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Database className="w-5 h-5 text-sky-400" />
                         <div>
-                          <h4 className="text-sm font-extrabold text-neutral-200">
+                          <h4 className={`text-sm font-extrabold ${darkMode ? 'text-neutral-200' : 'text-neutral-900'}`}>
                             {isRtl ? "تنظیمات لایه ذخیره‌سازی و دیتابیس (Storage Adapter)" : "Local Storage Adapter & Cloud Sync"}
                           </h4>
-                          <p className="text-[11px] text-neutral-400">
+                          <p className={`text-[11px] ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                             {isRtl ? "انتخاب بین کارکرد ۱۰۰٪ آفلاین رایگان و همگام‌سازی ابری اشتراکی" : "Choose between 100% free offline mode and paid cloud sync."}
                           </p>
                         </div>
@@ -3860,7 +3872,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                         className={`p-4 rounded-xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer ${
                           syncStats.mode === 'local_offline' 
                             ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 shadow-md shadow-emerald-500/10' 
-                            : 'bg-neutral-950/40 border-white/10 hover:border-white/20 text-neutral-400'
+                            : (darkMode ? 'bg-neutral-950/40 border-white/10 hover:border-white/20 text-neutral-400' : 'bg-neutral-50 border-neutral-200 hover:border-neutral-300 text-neutral-700')
                         }`}
                       >
                         <div className="flex items-center justify-between w-full">
@@ -3869,7 +3881,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                         </div>
                         <div>
                           <p className="text-xs font-black">{isRtl ? "حالت آفلاین محلی (رایگان)" : "Local Offline (Free)"}</p>
-                          <p className="text-[10px] text-neutral-400 mt-0.5">{isRtl ? "ذخیره‌سازی سریع در حافظه دستگاه بدون نیاز به اینترنت" : "Fast device-local storage without network dependence"}</p>
+                          <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "ذخیره‌سازی سریع در حافظه دستگاه بدون نیاز به اینترنت" : "Fast device-local storage without network dependence"}</p>
                         </div>
                       </button>
 
@@ -3883,7 +3895,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                         className={`p-4 rounded-xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer ${
                           syncStats.mode === 'cloud_synced' 
                             ? 'bg-sky-500/10 border-sky-500/40 text-sky-300 shadow-md shadow-sky-500/10' 
-                            : 'bg-neutral-950/40 border-white/10 hover:border-white/20 text-neutral-400'
+                            : (darkMode ? 'bg-neutral-950/40 border-white/10 hover:border-white/20 text-neutral-400' : 'bg-neutral-50 border-neutral-200 hover:border-neutral-300 text-neutral-700')
                         }`}
                       >
                         <div className="flex items-center justify-between w-full">
@@ -3892,7 +3904,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                         </div>
                         <div>
                           <p className="text-xs font-black">{isRtl ? "همگام‌سازی ابری (اشتراکی)" : "Cloud Synced (Subscription)"}</p>
-                          <p className="text-[10px] text-neutral-400 mt-0.5">{isRtl ? "پشتیبان‌گیری خودکار و همگام‌سازی بین دستگاهی" : "Automatic backup & cross-device sync"}</p>
+                          <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "پشتیبان‌گیری خودکار و همگام‌سازی بین دستگاهی" : "Automatic backup & cross-device sync"}</p>
                         </div>
                       </button>
                     </div>
@@ -3928,15 +3940,15 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       {/* QUICK ADD CATEGORY MODAL */}
       {showAddCategoryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+          <div className={`border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in duration-150 ${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}>
+            <div className={`flex items-center justify-between border-b pb-3 ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
               <h3 className="text-sm font-black text-sky-400 flex items-center gap-2">
                 <Layers className="w-4 h-4" />
                 <span>{isRtl ? "افزودن دسته‌بندی جدید" : "Add New Category"}</span>
               </h3>
               <button
                 onClick={() => setShowAddCategoryModal(false)}
-                className="p-1 text-neutral-400 hover:text-white rounded-lg"
+                className={`p-1 rounded-lg ${darkMode ? 'text-neutral-400 hover:text-white' : 'text-neutral-500 hover:text-neutral-800'}`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -3944,7 +3956,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
             <form onSubmit={handleCreateCategory} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                   {isRtl ? "نام دسته‌بندی (مثال: کفش ورزشی یا شلوار جین):" : "Category Name (e.g. Sneakers or Denim):"}
                 </label>
                 <input
@@ -3953,12 +3965,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                   placeholder={isRtl ? "مثال: کفش و کتانی" : "e.g. Footwear"}
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className={`w-full px-3 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950 border border-neutral-800 text-neutral-200' : 'bg-neutral-50 border border-neutral-200 text-neutral-900'}`}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-400 mb-1.5">
+                <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                   {isRtl ? "نوع ساختار پوشاک (تنظیم فرم راهنمای سایز):" : "Clothing Structure Type:"}
                 </label>
                 <select
@@ -3972,7 +3984,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                     else if (slug === 'accessories') setNewCatSystemType(4);
                     else setNewCatSystemType(1);
                   }}
-                  className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className={`w-full px-3 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950 border border-neutral-800 text-neutral-200' : 'bg-neutral-50 border border-neutral-200 text-neutral-900'}`}
                 >
                   <option value="tops">{isRtl ? "بالاتنه (تیشرت، هودی، پیراهن، کت، کاپشن)" : "Tops (T-Shirts, Hoodies, Shirts, Jackets)"}</option>
                   <option value="bottoms">{isRtl ? "پایین‌تنه (شلوار، شورت، دامن)" : "Bottoms (Pants, Shorts, Skirts)"}</option>
@@ -3986,7 +3998,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                 <button
                   type="button"
                   onClick={() => setShowAddCategoryModal(false)}
-                  className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold rounded-xl"
+                  className={`px-4 py-2 text-xs font-bold rounded-xl ${darkMode ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'}`}
                 >
                   {isRtl ? "انصراف" : "Cancel"}
                 </button>
