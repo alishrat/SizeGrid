@@ -391,7 +391,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
   // Products listing UX states
   const [productSearch, setProductSearch] = useState('');
-  const [productView, setProductView] = useState<'grid' | 'list'>('grid');
+  const [productView, setProductView] = useState<'grid' | 'list'>('list');
 
   // Compressor Tab State
   const [compressorFile, setCompressorFile] = useState<File | null>(null);
@@ -1156,38 +1156,69 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
   return (
     <div className={`min-h-screen flex ${darkMode ? 'bg-neutral-950 text-white' : 'bg-neutral-50 text-neutral-900'} transition-colors duration-300`} dir={isRtl ? 'rtl' : 'ltr'}>
       
-      {/* SIDEBAR NAVIGATION - Desktop */}
+      {/* SIDEBAR NAVIGATION - Desktop (Clean SaaS Style) */}
       <aside className={`w-64 border-r shrink-0 hidden md:flex flex-col justify-between ${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}>
         <div>
           {/* Brand header */}
-          <div className="p-6 border-b border-neutral-800 flex items-center gap-2">
-            <div className="p-2 bg-sky-600 rounded-lg text-white">
+          <div className={`p-5 border-b flex items-center gap-3 ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
+            <div className="p-2 bg-sky-600 rounded-xl text-white shadow-sm">
               <Grid3X3 className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-extrabold text-sm tracking-wide bg-gradient-to-r from-sky-400 to-indigo-500 bg-clip-text text-transparent">
-                پنل مدیریت تنخور (tankhor.com)
+              <h1 className="font-black text-sm tracking-tight text-sky-500">
+                {isRtl ? "مدیریت تن‌خور" : "Tankhor Admin"}
               </h1>
               <p className="text-[10px] text-neutral-500 font-bold">{t.store_settings}</p>
             </div>
           </div>
 
-          {/* User badge */}
-          <div className="p-4 mx-3 my-4 bg-sky-500/10 border border-sky-500/20 rounded-xl flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-sky-600/20 text-sky-400 font-extrabold flex items-center justify-center border border-sky-500/30">
-              <Store className="w-5 h-5" />
+          {/* User & Store Badge */}
+          <div className={`p-3.5 mx-3 my-3 border rounded-xl flex items-center gap-3 ${darkMode ? 'bg-neutral-800/50 border-neutral-800' : 'bg-neutral-50 border-neutral-200'}`}>
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-500 font-extrabold flex items-center justify-center border border-sky-500/20 shrink-0">
+              <Store className="w-4 h-4" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-extrabold truncate text-sky-400">{currentUser?.shop_name || 'My Shop'}</p>
+              <p className={`text-xs font-black truncate ${darkMode ? 'text-neutral-200' : 'text-neutral-800'}`}>{currentUser?.shop_name || 'My Shop'}</p>
               <p className="text-[10px] text-neutral-400 truncate text-left font-semibold">@{currentUser?.shop_slug || 'slug'}</p>
             </div>
+          </div>
+
+          {/* Storage & Hybrid Sync Status Card */}
+          <div className={`mx-3 mb-4 p-3 rounded-xl border text-xs space-y-2 ${darkMode ? 'bg-neutral-950/60 border-neutral-800' : 'bg-sky-50/50 border-sky-100'}`}>
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <span className="flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-sky-500" />
+                <span>{isRtl ? "دیتابیس:" : "Database:"}</span>
+              </span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                syncStats.mode === 'cloud_synced' 
+                  ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                  : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+              }`}>
+                {syncStats.mode === 'cloud_synced' ? (isRtl ? 'همگام ابری' : 'Cloud Synced') : (isRtl ? 'آفلاین محلی' : 'Local Offline')}
+              </span>
+            </div>
+
+            {syncStats.pendingCount > 0 && (
+              <div className="flex items-center justify-between pt-1 border-t border-neutral-800/20 text-[10px]">
+                <span className="text-amber-500 font-bold">{isRtl ? `${syncStats.pendingCount} تغییر معوق` : `${syncStats.pendingCount} pending`}</span>
+                <button
+                  type="button"
+                  onClick={handleManualSync}
+                  disabled={syncingCloud}
+                  className="px-2 py-0.5 bg-sky-600 hover:bg-sky-500 text-white rounded font-bold transition-all cursor-pointer"
+                >
+                  {syncingCloud ? '...' : (isRtl ? 'ارسال' : 'Push')}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Menu Items */}
           <nav className="px-3 space-y-1">
             <button
               onClick={() => { setActiveTab('products'); setIsEditingProd(null); }}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'products' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+              className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'products' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
             >
               <Package className="w-4 h-4" />
               <span>{isRtl ? "مدیریت کالاها" : "Products Manager"}</span>
@@ -1195,7 +1226,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
             <button
               onClick={() => { setActiveTab('warehouse'); setIsEditingProd(null); }}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'warehouse' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+              className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'warehouse' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
             >
               <Warehouse className="w-4 h-4" />
               <span>{isRtl ? "موجودی انبار" : "Warehouse Stock"}</span>
@@ -1203,7 +1234,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
             <button
               onClick={() => { setActiveTab('categories'); setIsEditingProd(null); }}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'categories' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+              className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'categories' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
             >
               <Layers className="w-4 h-4" />
               <span>{isRtl ? "مدیریت دسته‌بندی" : "Category Manager"}</span>
@@ -1211,7 +1242,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
             <button
               onClick={() => { setActiveTab('templates'); setIsEditingProd(null); }}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'templates' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+              className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'templates' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
             >
               <Ruler className="w-4 h-4" />
               <span>{isRtl ? "قالب‌های سایزبندی" : "Size Templates"}</span>
@@ -1219,7 +1250,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
             <button
               onClick={() => { setActiveTab('sizes'); setIsEditingProd(null); }}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'sizes' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+              className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'sizes' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
             >
               <Sliders className="w-4 h-4" />
               <span>{isRtl ? "مدیریت سایزها" : "Size Management"}</span>
@@ -1227,7 +1258,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
             <button
               onClick={() => { setActiveTab('compressor'); setIsEditingProd(null); }}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'compressor' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+              className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'compressor' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
             >
               <FileImage className="w-4 h-4" />
               <span>{isRtl ? "فشرده‌سازی تصویر" : "Image Compressor"}</span>
@@ -1235,7 +1266,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
             <button
               onClick={() => { setActiveTab('settings'); setIsEditingProd(null); }}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center gap-3 transition-all ${activeTab === 'settings' ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/15' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40'}`}
+              className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'settings' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
             >
               <Settings className="w-4 h-4" />
               <span>{isRtl ? "تنظیمات فروشگاه" : "Store Settings"}</span>
@@ -1244,17 +1275,17 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
         </div>
 
         {/* Bottom Sidebar Action */}
-        <div className="p-4 border-t border-neutral-800 space-y-3">
+        <div className={`p-4 border-t space-y-2 ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
           {currentUser?.shop_slug && (
             <a
               href={`/shop/${currentUser.shop_slug}/product/101`}
               target="_blank"
               rel="noreferrer"
-              className="w-full py-2 px-3 border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 text-[10px] font-extrabold rounded-lg flex items-center justify-between transition-all"
+              className="w-full py-2 px-3 border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 text-sky-500 text-[11px] font-bold rounded-xl flex items-center justify-between transition-all"
             >
               <div className="flex items-center gap-2">
                 <Compass className="w-3.5 h-3.5" />
-                <span>{isRtl ? "فروشگاه عمومی" : "Public Shop"}</span>
+                <span>{isRtl ? "دیدن ویترین عمومی" : "Public Showcase"}</span>
               </div>
               <ChevronLeft className="w-3 h-3" />
             </a>
@@ -1262,9 +1293,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
           <button
             onClick={handleLogout}
-            className="w-full py-2 px-4 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-all"
+            className="w-full py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5" />
             <span>{isRtl ? "خروج حساب" : "Sign Out"}</span>
           </button>
         </div>
