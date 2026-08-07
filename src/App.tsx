@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RouterProvider, Route } from './components/Router';
 import LandingPage from './components/LandingPage';
+import DesktopLogin from './components/DesktopLogin';
 import Dashboard from './components/Dashboard';
 import Storefront from './components/Storefront';
 import { I18nProvider, useTranslation } from './i18n';
@@ -8,6 +9,14 @@ import { I18nProvider, useTranslation } from './i18n';
 function AppContent() {
   const { lang, setLang } = useTranslation();
   const [darkMode, setDarkMode] = useState<boolean>(true);
+
+  // Detect native desktop application runtime (Tauri / Electron / desktop standalone)
+  const isDesktop = typeof window !== 'undefined' && (
+    '__TAURI__' in window || 
+    window.location.protocol === 'tauri:' || 
+    window.location.protocol === 'asset:' || 
+    window.location.search.includes('desktop=true')
+  );
 
   // Synchronize dark class on document element
   useEffect(() => {
@@ -23,11 +32,33 @@ function AppContent() {
 
   return (
     <RouterProvider>
-      {/* 1. Landing Page Routing */}
+      {/* 1. Root Route: Landing Page on Web, Modern Login Screen on Desktop */}
       <Route 
         pattern="/" 
         element={
-          <LandingPage 
+          isDesktop ? (
+            <DesktopLogin 
+              lang={lang} 
+              setLang={setLang} 
+              darkMode={darkMode} 
+              setDarkMode={setDarkMode} 
+            />
+          ) : (
+            <LandingPage 
+              lang={lang} 
+              setLang={setLang} 
+              darkMode={darkMode} 
+              setDarkMode={setDarkMode} 
+            />
+          )
+        } 
+      />
+
+      {/* 2. Direct Login Route */}
+      <Route 
+        pattern="/login" 
+        element={
+          <DesktopLogin 
             lang={lang} 
             setLang={setLang} 
             darkMode={darkMode} 
@@ -36,7 +67,7 @@ function AppContent() {
         } 
       />
 
-      {/* 2. Merchant Dashboard Subrouting */}
+      {/* 3. Merchant Dashboard Subrouting */}
       <Route 
         pattern="/dashboard/*" 
         element={
@@ -49,7 +80,7 @@ function AppContent() {
         } 
       />
 
-      {/* 3. Customer Storefront Route */}
+      {/* 4. Customer Storefront Route */}
       <Route 
         pattern="/shop/:shop_slug/product/:product_id" 
         element={

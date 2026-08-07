@@ -4,6 +4,9 @@ export interface User {
   shop_name?: string;
   shop_slug?: string;
   token?: string;
+  has_pro_subscription?: boolean;
+  subscription_tier?: 'free' | 'pro' | 'enterprise';
+  subscription_expires_at?: string;
 }
 
 export interface Color {

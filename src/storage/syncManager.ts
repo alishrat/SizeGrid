@@ -4,6 +4,15 @@ import { IStorageAdapter, StorageMode, SyncStats, SyncQueueItem } from './types'
 import { Product, Category, Size, Color, SizeGuideTemplate, InventoryItem, ClothingTypeSlug, DiffSyncPayload, Order, CreateOrderInput, OrderStatus } from '../types';
 import { DirectusAPI } from '../directus';
 
+const isDesktopEnv = (): boolean => {
+  return typeof window !== 'undefined' && (
+    '__TAURI__' in window || 
+    window.location.protocol === 'tauri:' || 
+    window.location.protocol === 'asset:' || 
+    window.location.search.includes('desktop=true')
+  );
+};
+
 export class StorageSyncManager implements IStorageAdapter {
   private localAdapter: LocalStorageAdapter;
   private cloudAdapter: DirectusCloudAdapter;
@@ -15,7 +24,15 @@ export class StorageSyncManager implements IStorageAdapter {
   constructor() {
     this.localAdapter = new LocalStorageAdapter();
     this.cloudAdapter = new DirectusCloudAdapter();
-    this.activeMode = this.localAdapter.getMode();
+
+    // Web browser environment is always cloud_synced; Desktop can be local_offline or cloud_synced
+    if (!isDesktopEnv()) {
+      this.activeMode = 'cloud_synced';
+      this.localAdapter.setMode('cloud_synced');
+      this.cloudAdapter.setMode('cloud_synced');
+    } else {
+      this.activeMode = this.localAdapter.getMode();
+    }
 
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
@@ -43,15 +60,38 @@ export class StorageSyncManager implements IStorageAdapter {
     this.syncListeners.forEach(listener => listener(stats));
   }
 
-  // --- STORAGE MODE MANAGEMENT ---
+  // --- STORAGE MODE MANAGEMENT & LICENSE GUARDS ---
   getMode(): StorageMode {
+    if (!isDesktopEnv()) {
+      return 'cloud_synced'; // Web is strictly cloud
+    }
     return this.activeMode;
   }
 
   setMode(mode: StorageMode): void {
+    // Web environment: Force cloud_synced
+    if (!isDesktopEnv()) {
+      this.activeMode = 'cloud_synced';
+      this.localAdapter.setMode('cloud_synced');
+      this.cloudAdapter.setMode('cloud_synced');
+      this.notifyListeners();
+      return;
+    }
+
+    // Desktop environment: Switching to cloud_synced requires active PRO subscription
+    if (mode === 'cloud_synced') {
+      const subInfo = DirectusAPI.getSubscriptionInfo();
+      if (!subInfo.isPro) {
+        this.lastError = 'روشن کردن همگام‌سازی ابری نیازمند اشتراک ویژه (Pro) است.';
+        this.notifyListeners();
+        throw new Error('روشن کردن همگام‌سازی ابری در نسخه دسکتاپ نیازمند اشتراک ویژه (Pro) است.');
+      }
+    }
+
     this.activeMode = mode;
     this.localAdapter.setMode(mode);
     this.cloudAdapter.setMode(mode);
+
     if (mode === 'cloud_synced') {
       this.syncLocalToCloud().catch(err => console.warn('Sync error on mode switch:', err));
     }
@@ -59,14 +99,19 @@ export class StorageSyncManager implements IStorageAdapter {
   }
 
   private get activeAdapter(): IStorageAdapter {
-    // If set to cloud_synced but offline, fallback to localAdapter
+    // Web always uses cloud adapter
+    if (!isDesktopEnv()) {
+      return this.cloudAdapter;
+    }
+
+    // If set to cloud_synced on desktop but offline, fallback to localAdapter
     if (this.activeMode === 'cloud_synced' && typeof navigator !== 'undefined' && !navigator.onLine) {
       return this.localAdapter;
     }
     return this.activeMode === 'cloud_synced' ? this.cloudAdapter : this.localAdapter;
   }
 
-  // --- HYBRID CLOUD SYNC OPERATION ---
+  // --- SAFE HYBRID CLOUD TWO-WAY SYNC OPERATION ---
   async syncLocalToCloud(): Promise<{ success: boolean; syncedCount: number; error?: string }> {
     if (this.syncInProgress) {
       return { success: false, syncedCount: 0, error: 'همگام‌سازی در حال انجام است.' };
@@ -76,6 +121,17 @@ export class StorageSyncManager implements IStorageAdapter {
       return { success: false, syncedCount: 0, error: 'دستگاه به اینترنت متصل نیست.' };
     }
 
+    // Verify subscription on Desktop
+    if (isDesktopEnv()) {
+      const subInfo = DirectusAPI.getSubscriptionInfo();
+      if (!subInfo.isPro) {
+        const msg = 'همگام‌سازی ابری نیازمند فعال بودن اشتراک ویژه (Pro) است.';
+        this.lastError = msg;
+        this.notifyListeners();
+        return { success: false, syncedCount: 0, error: msg };
+      }
+    }
+
     this.syncInProgress = true;
     this.lastError = null;
     this.notifyListeners();
@@ -83,7 +139,7 @@ export class StorageSyncManager implements IStorageAdapter {
     let syncedCount = 0;
 
     try {
-      // 1. Fetch current cloud state and local state
+      // 1. Fetch current cloud state and local state safely
       const [cloudProds, localProds, cloudCats, localCats, cloudTpls, localTpls, localInventory] = await Promise.all([
         this.cloudAdapter.getProducts().catch(() => []),
         this.localAdapter.getProducts().catch(() => []),
@@ -94,7 +150,7 @@ export class StorageSyncManager implements IStorageAdapter {
         this.localAdapter.getInventory().catch(() => [])
       ]);
 
-      // 2. Sync Categories created locally
+      // 2. Sync Categories (Local -> Cloud & Cloud -> Local)
       const catIdMap = new Map<number, number>(); // localId -> cloudId
       for (const lc of localCats) {
         const cloudCatMatch = cloudCats.find(cc => cc.id === lc.id || cc.name === lc.name || cc.name_fa === lc.name);
@@ -111,7 +167,7 @@ export class StorageSyncManager implements IStorageAdapter {
         }
       }
 
-      // 3. Sync Size Guide Templates created locally
+      // 3. Sync Size Guide Templates
       const tplIdMap = new Map<number, number>(); // localId -> cloudId
       for (const lt of localTpls) {
         const cloudTplMatch = cloudTpls.find(ct => ct.id === lt.id || ct.name === lt.name);
@@ -128,7 +184,7 @@ export class StorageSyncManager implements IStorageAdapter {
         }
       }
 
-      // 4. Sync Products and Inventory
+      // 4. Two-Way Sync Products and Inventory Matrix
       const prodIdMap = new Map<number, number>(); // localProductId -> cloudProductId
 
       for (const lp of localProds) {
@@ -137,7 +193,7 @@ export class StorageSyncManager implements IStorageAdapter {
 
         let cloudMatch = cloudProds.find(cp => cp.id === lp.id);
         if (!cloudMatch) {
-          cloudMatch = cloudProds.find(cp => cp.name_fa === lp.name_fa || cp.name_en === lp.name_fa);
+          cloudMatch = cloudProds.find(cp => cp.name_fa === lp.name_fa || (cp.name_en && cp.name_en === lp.name_en));
         }
 
         let finalCloudProduct: Product | null = null;
@@ -151,23 +207,7 @@ export class StorageSyncManager implements IStorageAdapter {
             });
             syncedCount++;
           } catch (e) {
-            try {
-              finalCloudProduct = await DirectusAPI.addProduct({
-                name_fa: lp.name_fa,
-                name_en: lp.name_en || lp.name_fa,
-                description_fa: lp.description_fa,
-                description_en: lp.description_en,
-                base_price: lp.base_price,
-                category: lp.category,
-                category_id: resolvedCatId,
-                clothing_type_slug: lp.clothing_type_slug,
-                image: lp.image,
-                size_guide_template_id: resolvedTplId
-              });
-              syncedCount++;
-            } catch (addErr) {
-              console.warn('Failed to add product to cloud:', addErr);
-            }
+            finalCloudProduct = cloudMatch;
           }
         } else {
           try {
@@ -232,10 +272,10 @@ export class StorageSyncManager implements IStorageAdapter {
         }
       }
 
-      // 6. Clear pending sync queue
+      // 6. Clear pending queue after successful sync
       this.localAdapter.clearPendingSyncQueue();
 
-      // 6. Fetch fresh full dataset from Cloud and sync local storage cache
+      // 7. Pull fresh full dataset from Cloud and update local storage cache (Cloud -> Local Two-way sync)
       const [freshProds, freshCats, freshSizes, freshColors, freshTpls, freshInv] = await Promise.all([
         DirectusAPI.getProducts().catch(() => []),
         DirectusAPI.getCategories().catch(() => []),

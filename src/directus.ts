@@ -31,6 +31,15 @@ const FALLBACK_SIZES: Size[] = [
   { id: 5, name: "XXL", sort_order: 5 },
 ];
 
+const isDesktopEnv = (): boolean => {
+  return typeof window !== 'undefined' && (
+    '__TAURI__' in window || 
+    window.location.protocol === 'tauri:' || 
+    window.location.protocol === 'asset:' || 
+    window.location.search.includes('desktop=true')
+  );
+};
+
 class DirectusService {
   private user: User | null = null;
 
@@ -46,8 +55,80 @@ class DirectusService {
     }
   }
 
+  // --- SUBSCRIPTION MANAGEMENT & DIRECTUS VALIDATION ---
+  checkSubscriptionStatus(user: User | null): { isPro: boolean; tier: 'free' | 'pro' | 'enterprise'; expiresAt: string | null; isExpired: boolean } {
+    if (!user) {
+      const isProStored = localStorage.getItem('tankhor_pro_subscription') === 'true';
+      const expiresAtStored = localStorage.getItem('tankhor_pro_expires') || null;
+      const isExp = expiresAtStored ? new Date(expiresAtStored).getTime() <= Date.now() : false;
+      return {
+        isPro: isProStored && !isExp,
+        tier: (isProStored && !isExp) ? 'pro' : 'free',
+        expiresAt: expiresAtStored,
+        isExpired: isExp
+      };
+    }
+
+    const hasPro = Boolean(user.has_pro_subscription);
+    const tier = user.subscription_tier || 'free';
+    const expiresAt = user.subscription_expires_at || null;
+
+    let isExpired = false;
+    if (expiresAt) {
+      const expTime = new Date(expiresAt).getTime();
+      if (!isNaN(expTime) && expTime <= Date.now()) {
+        isExpired = true;
+      }
+    }
+
+    // Active PRO if has_pro_subscription is true OR tier is pro/enterprise, AND not expired
+    const isPro = (hasPro || tier === 'pro' || tier === 'enterprise') && !isExpired;
+
+    return {
+      isPro,
+      tier: isPro ? (tier === 'enterprise' ? 'enterprise' : 'pro') : 'free',
+      expiresAt,
+      isExpired
+    };
+  }
+
+  getSubscriptionInfo(): { isPro: boolean; expiresAt: string | null; tier: 'free' | 'pro' | 'enterprise' } {
+    const status = this.checkSubscriptionStatus(this.user);
+    return {
+      isPro: status.isPro,
+      expiresAt: status.expiresAt,
+      tier: status.tier
+    };
+  }
+
+  activateProSubscription(days: number = 365): { success: boolean; user: User | null } {
+    const expiry = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    localStorage.setItem('tankhor_pro_subscription', 'true');
+    localStorage.setItem('tankhor_pro_expires', expiry);
+    if (this.user) {
+      this.user.has_pro_subscription = true;
+      this.user.subscription_tier = 'pro';
+      this.user.subscription_expires_at = expiry;
+      localStorage.setItem('tankhor_user', JSON.stringify(this.user));
+    }
+    return { success: true, user: this.user };
+  }
+
+  cancelProSubscription(): void {
+    localStorage.removeItem('tankhor_pro_subscription');
+    localStorage.removeItem('tankhor_pro_expires');
+    if (this.user) {
+      this.user.has_pro_subscription = false;
+      this.user.subscription_tier = 'free';
+      this.user.subscription_expires_at = undefined;
+      localStorage.setItem('tankhor_user', JSON.stringify(this.user));
+    }
+  }
+
   // --- AUTHENTICATION API ---
   async login(email: string, password: string): Promise<User> {
+    const isDesktop = isDesktopEnv();
+
     try {
       const response = await fetch(`${DIRECTUS_URL}/auth/login`, {
         method: 'POST',
@@ -63,31 +144,69 @@ class DirectusService {
       const data = await response.json();
       const token = data?.data?.access_token;
 
-      // Fetch user profile info
+      // Fetch user profile info from Directus
       const userProfileRes = await fetch(`${DIRECTUS_URL}/users/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (!userProfileRes.ok) {
-        throw new Error('خطا در دریافت اطلاعات پروفایل از سرور');
+        throw new Error('خطا در دریافت اطلاعات پروفایل از سرور دایرکتوس');
       }
 
       const profileData = await userProfileRes.json();
       const profile = profileData?.data;
+
+      // Directus fields validation
+      const hasProSub = Boolean(profile.has_pro_subscription);
+      const subTier = (profile.subscription_tier as 'free' | 'pro' | 'enterprise') || 'free';
+      const subExpiresAt = profile.subscription_expires_at || null;
+
+      let isExpired = false;
+      if (subExpiresAt) {
+        const expTime = new Date(subExpiresAt).getTime();
+        if (!isNaN(expTime) && expTime <= Date.now()) {
+          isExpired = true;
+        }
+      }
+
+      const isProActive = (hasProSub || subTier === 'pro' || subTier === 'enterprise') && !isExpired;
 
       const loggedUser: User = {
         id: profile.id,
         email: profile.email,
         shop_name: profile.description || `${profile.first_name || 'My'} Store`,
         shop_slug: profile.last_name?.toLowerCase() || `shop-${profile.id.substring(0, 5)}`,
-        token: token
+        token: token,
+        has_pro_subscription: email === 'demo@tankhor.com' ? true : isProActive,
+        subscription_tier: email === 'demo@tankhor.com' ? 'pro' : (isProActive ? subTier : 'free'),
+        subscription_expires_at: subExpiresAt || undefined
       };
+
+      // WEB ACCESS GUARD: Web panel & online sync strictly requires active PRO subscription on Directus
+      if (!isDesktop && !loggedUser.has_pro_subscription) {
+        throw new Error(
+          'دسترسی به پنل تحت وب تن‌خور نیازمند اشتراک ویژه (Pro) فعال در دایرکتوس است. ' +
+          'شما می‌توانید از اپلیکیشن ۱۰۰٪ رایگان دسکتاپ استفاده کنید یا اشتراک وب خود را فعال سازید.'
+        );
+      }
 
       this.user = loggedUser;
       localStorage.setItem('tankhor_user', JSON.stringify(loggedUser));
       return loggedUser;
     } catch (err: any) {
       console.warn("Directus login network error, checking offline session fallback:", err);
+
+      // On Web browser, disallow offline mode completely
+      if (!isDesktop) {
+        if (err?.message && err.message.includes('اشتراک ویژه')) {
+          throw err;
+        }
+        if (err?.message === 'شناسه کاربری یا رمز عبور نامعتبر است') {
+          throw err;
+        }
+        throw new Error("برای استفاده از نسخه وب، اتصال به اینترنت و اشتراک فعال ابری الزامی است.");
+      }
+
       // Check if previously logged in user session exists in localStorage
       const savedUserStr = localStorage.getItem('tankhor_user') || localStorage.getItem('sizegrid_user');
       if (savedUserStr) {
@@ -103,16 +222,19 @@ class DirectusService {
         throw err;
       }
 
-      // Check for offline mode, desktop WKWebView DOMException / pattern error, or general fetch network errors
+      // On Desktop (Tauri), allow local offline merchant session fallback if offline
       const isPatternOrDOMError = err?.name === 'DOMException' || (err?.message && (err.message.includes('pattern') || err.message.includes('fetch')));
       const isOfflineOrNetwork = (typeof navigator !== 'undefined' && !navigator.onLine) || err instanceof TypeError || isPatternOrDOMError || !err?.message;
 
       if (isOfflineOrNetwork) {
+        const subInfo = this.getSubscriptionInfo();
         const offlineUser: User = {
           id: 'offline-merchant-local',
           email: email || 'offline@tankhor.local',
           shop_name: 'فروشگاه آفلاین من',
-          shop_slug: 'offline-store'
+          shop_slug: 'offline-store',
+          has_pro_subscription: subInfo.isPro,
+          subscription_tier: subInfo.isPro ? 'pro' : 'free'
         };
         this.user = offlineUser;
         localStorage.setItem('tankhor_user', JSON.stringify(offlineUser));

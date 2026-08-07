@@ -43,6 +43,7 @@ import {
   Cloud,
   CloudOff,
   Database,
+  Crown,
   Wifi,
   WifiOff,
   Globe
@@ -1413,6 +1414,21 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
           <div className="flex items-center gap-3">
             {/* Desktop App Update Widget Badge */}
             <AppUpdateWidget compact />
+
+            {/* Subscription License Badge */}
+            {(() => {
+              const sub = DirectusAPI.getSubscriptionInfo();
+              return (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black ${
+                  sub.isPro 
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
+                    : 'bg-neutral-800 border-neutral-700 text-neutral-400'
+                }`}>
+                  <Crown className="w-3 h-3 text-amber-400" />
+                  <span>{sub.isPro ? 'PRO' : (isRtl ? 'دسکتاپ' : 'Desktop')}</span>
+                </span>
+              );
+            })()}
 
             {/* Directus Cloud Sync Icon Button */}
             <button
@@ -3930,6 +3946,61 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                     </button>
                   </form>
 
+                  {/* Subscription Management & Plan Status Card */}
+                  <div className={`pt-6 border-t space-y-4 ${darkMode ? 'border-white/10' : 'border-neutral-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Crown className="w-5 h-5 text-amber-400" />
+                        <div>
+                          <h4 className={`text-sm font-extrabold ${darkMode ? 'text-neutral-200' : 'text-neutral-900'}`}>
+                            {isRtl ? "مدیریت اشتراک و لایسنس تن‌خور" : "Subscription & Licensing"}
+                          </h4>
+                          <p className={`text-[11px] ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
+                            {isRtl ? "نسخه دسکتاپ به صورت ۱۰۰٪ رایگان کار می‌کند • همگام‌سازی ابری و نسخه وب نیازمند اشتراک ویژه است" : "Desktop is 100% free offline • Cloud sync and Web App require PRO subscription"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const sub = DirectusAPI.getSubscriptionInfo();
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-black border flex items-center gap-1 ${
+                              sub.isPro 
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
+                                : 'bg-neutral-800 border-neutral-700 text-neutral-400'
+                            }`}>
+                              <Crown className="w-3.5 h-3.5" />
+                              <span>{sub.isPro ? (isRtl ? "اشتراک ویژه PRO" : "PRO Plan") : (isRtl ? "طرح دسکتاپ رایگان" : "Free Desktop Tier")}</span>
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (sub.isPro) {
+                                  DirectusAPI.cancelProSubscription();
+                                  setSuccess(isRtl ? "اشتراک به طرح رایگان تغییر یافت." : "Switched to free plan.");
+                                } else {
+                                  DirectusAPI.activateProSubscription(365);
+                                  setSuccess(isRtl ? "اشتراک ویژه ۱ ساله PRO با موفقیت فعال شد!" : "PRO subscription activated successfully!");
+                                }
+                                setSyncStats(storageManager.getSyncStats());
+                                setTimeout(() => setSuccess(''), 3000);
+                              }}
+                              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                sub.isPro 
+                                  ? 'border-neutral-700 text-neutral-400 hover:bg-neutral-800' 
+                                  : 'bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 border-amber-400 font-black shadow-md hover:opacity-90'
+                              }`}
+                            >
+                              {sub.isPro ? (isRtl ? "غیرفعال‌سازی PRO" : "Cancel PRO") : (isRtl ? "فعال‌سازی تست PRO" : "Activate PRO Trial")}
+                            </button>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
                   {/* Storage Adapter & Offline/Cloud Configuration Card */}
                   <div className={`pt-6 border-t space-y-4 ${darkMode ? 'border-white/10' : 'border-neutral-200'}`}>
                     <div className="flex items-center justify-between">
@@ -3940,7 +4011,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                             {isRtl ? "تنظیمات لایه ذخیره‌سازی و دیتابیس (Storage Adapter)" : "Local Storage Adapter & Cloud Sync"}
                           </h4>
                           <p className={`text-[11px] ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                            {isRtl ? "انتخاب بین کارکرد ۱۰۰٪ آفلاین رایگان و همگام‌سازی ابری اشتراکی" : "Choose between 100% free offline mode and paid cloud sync."}
+                            {isRtl ? "انتخاب بین کارکرد ۱۰۰٪ آفلاین رایگان و همگام‌سازی ابری دوطرفه" : "Choose between 100% free offline mode and safe two-way cloud sync."}
                           </p>
                         </div>
                       </div>
@@ -3950,9 +4021,20 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       <button
                         type="button"
                         onClick={() => {
-                          storageManager.setMode('local_offline');
-                          setSuccess(isRtl ? "حالت دیتابیس آفلاین محلی فعال شد." : "Offline local database mode activated.");
-                          setTimeout(() => setSuccess(''), 3000);
+                          const isDesktop = typeof window !== 'undefined' && ('__TAURI__' in window || window.location.protocol === 'tauri:' || window.location.protocol === 'asset:' || window.location.search.includes('desktop=true'));
+                          if (!isDesktop) {
+                            setError(isRtl ? "در مرورگر وب فقط حالت ابری آنلاین فعال است و امکان سوئیچ به آفلاین وجود ندارد." : "Web browser mode is strictly cloud synced.");
+                            setTimeout(() => setError(''), 4000);
+                            return;
+                          }
+                          try {
+                            storageManager.setMode('local_offline');
+                            setSuccess(isRtl ? "حالت دیتابیس آفلاین محلی فعال شد." : "Offline local database mode activated.");
+                            setTimeout(() => setSuccess(''), 3000);
+                          } catch (err: any) {
+                            setError(err.message);
+                            setTimeout(() => setError(''), 4000);
+                          }
                         }}
                         className={`p-4 rounded-xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer ${
                           syncStats.mode === 'local_offline' 
@@ -3973,9 +4055,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       <button
                         type="button"
                         onClick={() => {
-                          storageManager.setMode('cloud_synced');
-                          setSuccess(isRtl ? "حالت همگام‌سازی ابری فعال شد." : "Cloud synced mode activated.");
-                          setTimeout(() => setSuccess(''), 3000);
+                          try {
+                            storageManager.setMode('cloud_synced');
+                            setSuccess(isRtl ? "حالت همگام‌سازی ابری دوطرفه فعال شد." : "Two-way cloud synced mode activated.");
+                            setTimeout(() => setSuccess(''), 3000);
+                          } catch (err: any) {
+                            setError(err.message || (isRtl ? "روشن کردن همگام‌سازی ابری نیازمند اشتراک ویژه (PRO) است." : "Cloud sync requires an active PRO subscription."));
+                            setTimeout(() => setError(''), 5000);
+                          }
                         }}
                         className={`p-4 rounded-xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer ${
                           syncStats.mode === 'cloud_synced' 
@@ -3988,8 +4075,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                           {syncStats.mode === 'cloud_synced' && <CheckCircle2 className="w-4 h-4 text-sky-400" />}
                         </div>
                         <div>
-                          <p className="text-xs font-black">{isRtl ? "همگام‌سازی ابری (اشتراکی)" : "Cloud Synced (Subscription)"}</p>
-                          <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "پشتیبان‌گیری خودکار و همگام‌سازی بین دستگاهی" : "Automatic backup & cross-device sync"}</p>
+                          <p className="text-xs font-black">{isRtl ? "همگام‌سازی ابری (نیازمند PRO)" : "Cloud Synced (PRO)"}</p>
+                          <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>{isRtl ? "پشتیبان‌گیری خودکار و همگام‌سازی دوطرفه بین دسکتاپ و وب" : "Automatic backup & safe two-way desktop-web sync"}</p>
                         </div>
                       </button>
                     </div>

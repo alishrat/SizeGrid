@@ -258,12 +258,21 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
             </button>
             
-            {/* CTA Header Button */}
-            <a
-              href="#auth-section"
-              className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 rounded-xl shadow-md hover:shadow-sky-500/20 transition-all cursor-pointer"
+            {/* Direct Login Button */}
+            <button
+              onClick={() => navigate('/login')}
+              className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-900' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
             >
-              {t.get_started}
+              {isRtl ? "ورود به پنل" : "Login"}
+            </button>
+
+            {/* Download CTA Header Button */}
+            <a
+              href="#download-section"
+              className="hidden sm:inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 rounded-xl shadow-md hover:shadow-sky-500/20 transition-all cursor-pointer"
+            >
+              <Laptop className="w-3.5 h-3.5" />
+              <span>{isRtl ? "دانلود رایگان دسکتاپ" : "Download Desktop Free"}</span>
             </a>
           </div>
         </div>
@@ -282,24 +291,25 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
             {/* Top Pill Tag */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-black shadow-sm">
               <Sparkles className="w-4 h-4 text-sky-400 animate-spin-slow" />
-              <span>{isRtl ? "پلتفرم اختصاصی مدیریت سایز و موجودی پوشاک (tankhor.com)" : "Specialized Apparel Sizing & Inventory Platform"}</span>
+              <span>{isRtl ? "پلتفرم اختصاصی دسکتاپ مدیریت پوشاک و سایز (۱۰۰٪ رایگان و آفلاین)" : "Free Desktop Platform for Apparel Inventory & Sizing (100% Offline)"}</span>
             </div>
             
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
-              {t.hero_title}
+              {isRtl ? "مدیریت حرفه‌ای پوشاک و سایز، کاملاً رایگان روی دسکتاپ" : "Professional Apparel & Size Management Free on Desktop"}
             </h1>
             
             <p className={`text-sm sm:text-base ${darkMode ? 'text-neutral-300' : 'text-neutral-600'} leading-relaxed max-w-2xl mx-auto lg:mx-0 font-medium`}>
-              {t.hero_subtitle}
+              {isRtl ? "نرم‌افزار دسکتاپ تن‌خور بدون نیاز به اینترنت و بدون هزینه اشتراک به صورت ۱۰۰٪ آفلاین روی ویندوز، مک و لینوکس اجرا می‌شود. مدیریت انبار پوشاک، ماتریس سایز/رنگ و راهنمای سایز اختصاصی مشتریان را رایگان تجربه کنید." : "Tankhor desktop app runs 100% offline with zero subscription fees on Windows, macOS, and Linux. Easily manage garment inventory, size matrices, and customer size guides locally."}
             </p>
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
               <a
-                href="#auth-section"
+                href="#download-section"
                 className="px-7 py-3.5 font-black text-xs text-white bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 rounded-xl shadow-xl shadow-sky-600/20 transition-all flex items-center gap-2 cursor-pointer"
               >
-                <span>{t.get_started}</span>
+                <Laptop className="w-4 h-4" />
+                <span>{isRtl ? "دانلود مستقیم نسخه دسکتاپ (رایگان)" : "Download Free Desktop App"}</span>
                 {isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </a>
               
@@ -308,191 +318,131 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
                 className={`px-6 py-3.5 font-bold text-xs border rounded-xl hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer ${darkMode ? 'border-white/10 text-neutral-200' : 'border-neutral-300 text-neutral-800'}`}
               >
                 <Sliders className="w-4 h-4 text-sky-400" />
-                <span>{isRtl ? "تست آنلاین ویجت هوشمند پیشنهاد سایز" : "Try Sizing Calculator"}</span>
+                <span>{isRtl ? "تست آنلاین ویجت پیشنهاد سایز" : "Try Sizing Widget"}</span>
               </a>
             </div>
 
             {/* Quick Metrics / Stats Grid */}
             <div className="pt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-white/10 max-w-xl mx-auto lg:mx-0">
               <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
-                <p className="text-xl font-black text-sky-400">%۳۴-</p>
-                <p className="text-[11px] text-neutral-400 mt-0.5 font-bold">{isRtl ? "کاهش مرجوعی کالا" : "Return Rate Reduction"}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
-                <p className="text-xl font-black text-indigo-400">۱۰X</p>
-                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "سرعت تنظیم متغیرها" : "Faster Setup"}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
                 <p className="text-xl font-black text-emerald-400">۱۰۰٪</p>
-                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "آفلاین محلی (رایگان)" : "100% Free Local DB"}</p>
+                <p className="text-[11px] text-neutral-400 mt-0.5 font-bold">{isRtl ? "رایگان برای دسکتاپ" : "100% Free Desktop"}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
+                <p className="text-xl font-black text-sky-400">آفلاین</p>
+                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "دیتابیس محلی بدون اینترنت" : "No Internet Needed"}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
+                <p className="text-xl font-black text-indigo-400">%۳۴-</p>
+                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "کاهش مرجوعی سایز" : "Less Size Returns"}</p>
               </div>
               <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
                 <p className="text-xl font-black text-amber-400">۰ms</p>
-                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "تاخیر محاسبات هوشمند" : "Client Calculation"}</p>
+                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "سرعت اجرای دسکتاپ" : "Instant Performance"}</p>
               </div>
             </div>
 
           </div>
 
-          {/* Right Login / Register Card */}
-          <div className="lg:col-span-5" id="auth-section">
+          {/* Right Desktop Feature & Download Card */}
+          <div className="lg:col-span-5" id="download-section">
             <div className={`p-6 sm:p-8 rounded-3xl border backdrop-blur-2xl shadow-2xl transition-all relative ${darkMode ? 'bg-neutral-900/90 border-white/10 shadow-sky-950/20' : 'bg-white/95 border-neutral-200 shadow-neutral-300/40'}`}>
               
-              {/* Header Badge inside card */}
+              {/* Card Header */}
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <Store className="w-5 h-5 text-sky-400" />
-                  <h3 className="text-sm font-extrabold text-neutral-200">
-                    {isRtl ? "ورود / ثبت‌نام پنل فروشگاه" : "Store Management Portal"}
-                  </h3>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    <Laptop className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className={`text-sm font-extrabold ${darkMode ? 'text-neutral-100' : 'text-neutral-900'}`}>
+                      {isRtl ? "نسخه رایگان دسکتاپ تن‌خور" : "Tankhor Free Desktop App"}
+                    </h3>
+                    <p className="text-[11px] text-neutral-400">
+                      {isRtl ? "بدون محدودیت زمانی و بدون نیاز به ثبت‌نام" : "No time limit • No signup required"}
+                    </p>
+                  </div>
                 </div>
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-bold">
-                  {isRtl ? "رایگان و سریع" : "Free & Instant"}
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-black">
+                  {isRtl ? "۱۰۰٪ رایگان" : "100% Free"}
                 </span>
               </div>
 
-              {/* Login/Register Tabs */}
-              <div className="flex bg-neutral-950/50 p-1 rounded-xl border border-white/5 mb-6">
-                <button
-                  type="button"
-                  onClick={() => { setIsLogin(true); setError(''); }}
-                  className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${isLogin ? 'bg-sky-600 text-white shadow' : 'text-neutral-400 hover:text-neutral-200'}`}
-                >
-                  {t.login}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsLogin(false); setError(''); }}
-                  className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${!isLogin ? 'bg-sky-600 text-white shadow' : 'text-neutral-400 hover:text-neutral-200'}`}
-                >
-                  {t.register}
-                </button>
+              {/* Feature Highlights List */}
+              <div className="space-y-3 mb-6 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>
+                    {isRtl ? "کارکرد کامل به‌صورت آفلاین محلی (Local Storage Adapter)" : "Runs completely offline with local storage adapter"}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>
+                    {isRtl ? "مدیریت قالب‌های راهنمای سایز و انبارداری پوشاک" : "Full size guide matrix and apparel inventory management"}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>
+                    {isRtl ? "قابلیت همگام‌سازی ابری اختیاری (ویژه مشترکین PRO)" : "Optional two-way cloud sync for PRO subscribers"}
+                  </span>
+                </div>
               </div>
 
-              {/* Action Error / Success Alerts */}
-              {error && (
-                <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 font-medium">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {success && (
-                <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2 font-medium">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>{success}</span>
-                </div>
-              )}
-
-              {/* Auth Form */}
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
-                
-                {!isLogin && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-extrabold mb-1 text-neutral-400">{t.shop_name}</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-neutral-500">
-                          <Store className="w-4 h-4" />
-                        </span>
-                        <input
-                          type="text"
-                          required
-                          value={shopName}
-                          onChange={(e) => setShopName(e.target.value)}
-                          placeholder={isRtl ? "مثال: پوشاک ورزشی نایک" : "e.g. Nike Sportswear"}
-                          className={`w-full pr-10 pl-3 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-900'}`}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-extrabold mb-1 text-neutral-400">
-                        {t.shop_slug} <span className="text-[10px] text-sky-400">(مثال: nike)</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-neutral-500">
-                          <Globe className="w-4 h-4" />
-                        </span>
-                        <input
-                          type="text"
-                          required
-                          value={shopSlug}
-                          onChange={(e) => setShopSlug(e.target.value)}
-                          placeholder="nike"
-                          className={`w-full pr-10 pl-3 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 text-left dir-ltr ${darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-900'}`}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                <div>
-                  <label className="block text-xs font-extrabold mb-1 text-neutral-400">{t.email}</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-neutral-500">
-                      <Mail className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@store.com"
-                      className={`w-full pr-10 pl-3 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 text-left dir-ltr ${darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-900'}`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-extrabold mb-1 text-neutral-400">{t.password}</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-neutral-500">
-                      <Lock className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className={`w-full pr-10 pl-3 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 text-left dir-ltr ${darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-900'}`}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 mt-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold rounded-xl shadow-lg shadow-sky-600/20 transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
+              {/* Direct Desktop Download Links */}
+              <div className="space-y-2.5 pt-2">
+                <a
+                  href="#download-windows"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    alert(isRtl ? "دانلود نسخه ویندوز دسکتاپ تن‌خور شروع شد (Tankhor_Setup.exe)" : "Starting Windows download (Tankhor_Setup.exe)");
+                  }}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold rounded-xl shadow-lg shadow-sky-600/20 transition-all text-xs flex items-center justify-between cursor-pointer"
                 >
-                  {loading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span>{isLogin ? t.login : t.register}</span>
-                  )}
-                </button>
-              </form>
+                  <div className="flex items-center gap-2">
+                    <Laptop className="w-4 h-4" />
+                    <span>{isRtl ? "دانلود نسخه ویندوز (Windows .exe)" : "Download for Windows (.exe)"}</span>
+                  </div>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded font-mono">v2.5.0</span>
+                </a>
 
-              {/* Developer / Reviewer Demo Shortcut Button */}
-              <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                <button
-                  type="button"
-                  onClick={handleDemoFill}
-                  className="w-full py-2 px-3 text-xs font-extrabold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{isRtl ? "دمو" : "Demo"}</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href="#download-mac"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert(isRtl ? "دانلود نسخه مک دسکتاپ تن‌خور شروع شد (Tankhor_macOS.dmg)" : "Starting macOS download (Tankhor_macOS.dmg)");
+                    }}
+                    className={`py-2.5 px-3 border rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${darkMode ? 'border-neutral-800 hover:bg-neutral-800 text-neutral-300' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-800'}`}
+                  >
+                    <span>{isRtl ? "نسخه مک (macOS)" : "macOS (.dmg)"}</span>
+                  </a>
+
+                  <a
+                    href="#download-linux"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert(isRtl ? "دانلود نسخه لینوکس دسکتاپ تن‌خور شروع شد (Tankhor.AppImage)" : "Starting Linux download (Tankhor.AppImage)");
+                    }}
+                    className={`py-2.5 px-3 border rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${darkMode ? 'border-neutral-800 hover:bg-neutral-800 text-neutral-300' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-800'}`}
+                  >
+                    <span>{isRtl ? "لینوکس (Linux)" : "Linux (.AppImage)"}</span>
+                  </a>
+                </div>
               </div>
 
-              {/* Toggle Account mode */}
-              <div className="mt-3 text-center">
+              {/* Existing Subscriber Login Redirect */}
+              <div className="mt-5 pt-4 border-t border-white/10 text-center">
+                <p className="text-[11px] text-neutral-400 mb-2">
+                  {isRtl ? "مشترک ویژه PRO هستید و می‌خواهید از نسخه وب استفاده کنید؟" : "Already a PRO subscriber wanting to access Web Panel?"}
+                </p>
                 <button
-                  onClick={() => { setIsLogin(!isLogin); setError(''); }}
-                  className="text-xs text-neutral-400 hover:text-neutral-200 transition-all font-semibold"
+                  onClick={() => navigate('/login')}
+                  className="px-4 py-2 text-xs font-black text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer"
                 >
-                  {isLogin ? t.no_account : t.have_account}
+                  <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
+                  <span>{isRtl ? "ورود به پنل آنلاین وب" : "Login to Web Panel"}</span>
                 </button>
               </div>
 
