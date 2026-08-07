@@ -1,8 +1,8 @@
-import { User, Product, InventoryItem, Color, Size, SizeGuideTemplate, Category, ClothingType, ClothingTypeSlug, DiffSyncPayload } from '../types';
+import { User, Product, InventoryItem, Color, Size, SizeGuideTemplate, Category, ClothingType, ClothingTypeSlug, DiffSyncPayload, Order, CreateOrderInput, OrderStatus } from '../types';
 
 export type SyncStatus = 'synced' | 'pending_create' | 'pending_update' | 'pending_delete';
 export type StorageMode = 'local_offline' | 'cloud_synced';
-export type EntityType = 'product' | 'category' | 'inventory' | 'size_template' | 'color' | 'size';
+export type EntityType = 'product' | 'category' | 'inventory' | 'size_template' | 'color' | 'size' | 'order';
 
 export interface SyncQueueItem {
   id: string;
@@ -41,6 +41,7 @@ export interface IStorageAdapter {
   // Sizes & Colors
   getSizes(): Promise<Size[]>;
   saveSize(name: string, sortOrder?: number): Promise<Size>;
+  deleteSize(id: number): Promise<boolean>;
   getColors(): Promise<Color[]>;
   saveColor(nameFa: string, nameEn: string, hexCode: string): Promise<Color>;
 
@@ -54,8 +55,16 @@ export interface IStorageAdapter {
   updateInventory(items: InventoryItem[]): Promise<boolean>;
   syncInventoryDiff(productId: number, payload: DiffSyncPayload): Promise<boolean>;
 
+  // Orders
+  getOrders(): Promise<Order[]>;
+  getOrderById(id: number): Promise<Order | null>;
+  createOrder(orderInput: CreateOrderInput): Promise<Order>;
+  updateOrderStatus(id: number, status: OrderStatus | string): Promise<boolean>;
+  deleteOrder(id: number): Promise<boolean>;
+
   // Sync Operations
   getPendingSyncQueue(): SyncQueueItem[];
   clearPendingSyncQueue(): void;
   getSyncStats(): SyncStats;
 }
+

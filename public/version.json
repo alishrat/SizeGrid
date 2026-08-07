@@ -1,0 +1,18 @@
+{
+  "version": "1.1.0",
+  "releaseDate": "2026-08-07",
+  "minSupportedVersion": "1.0.0",
+  "changelog": {
+    "fa": [
+      "بهینه‌سازی لایه ذخیره‌سازی و همگام‌سازی ابری و آفلاین",
+      "پشتیبانی کامل از دریافت و نصب خودکار به‌روزرسانی‌های نسخه دسکتاپ (Tauri / Electron)",
+      "ارتقای موتور هوشمند پیشنهاد سایز و مدیریت ماتریسی موجودی"
+    ],
+    "en": [
+      "Optimized storage layer and hybrid offline/cloud sync engine",
+      "Full desktop app auto-updater support for Tauri / Electron runtimes",
+      "Upgraded smart sizing engine and 2D inventory matrix manager"
+    ]
+  },
+  "downloadUrl": "https://github.com/tankhor/tankhor-app/releases/latest"
+}

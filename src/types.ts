@@ -124,3 +124,67 @@ export interface DiffSyncPayload {
 export interface LocaleDictionary {
   [key: string]: string;
 }
+
+export interface AppVersionInfo {
+  version: string;
+  releaseDate: string;
+  changelog: {
+    fa: string[];
+    en: string[];
+  };
+  downloadUrl?: string;
+  minSupportedVersion?: string;
+  isMandatory?: boolean;
+}
+
+export type UpdateCheckStatus = 'idle' | 'checking' | 'update_available' | 'up_to_date' | 'downloading' | 'ready_to_install' | 'error';
+
+export interface UpdateState {
+  currentVersion: string;
+  status: UpdateCheckStatus;
+  latestRelease: AppVersionInfo | null;
+  downloadProgress: number;
+  errorMessage: string | null;
+  lastCheckedTime: number | null;
+}
+
+export type OrderStatus = 'published' | 'draft' | 'archived' | 'completed' | 'pending' | 'cancelled';
+
+export interface OrderItem {
+  id?: number;
+  order_id?: number;
+  item_inventory: number; // InventoryItem ID
+  item_quantity: number;
+  item_price: number;
+  item_total: number;
+  // Expanded visual helper fields
+  inventory_item?: InventoryItem;
+  product_name?: string;
+  color_name?: string;
+  size_name?: string;
+}
+
+export interface Order {
+  id: number;
+  status: OrderStatus | string;
+  sort?: number;
+  order_total: number;
+  date_created?: string;
+  user_created?: string;
+  user_updated?: string;
+  date_updated?: string;
+  order_items?: OrderItem[];
+}
+
+export interface CreateOrderItemInput {
+  item_inventory: number;
+  item_quantity: number;
+  item_price: number;
+}
+
+export interface CreateOrderInput {
+  status?: OrderStatus | string;
+  order_total?: number;
+  items: CreateOrderItemInput[];
+}
+

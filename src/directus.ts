@@ -1,4 +1,4 @@
-import { User, Product, InventoryItem, Color, Size, DiffSyncPayload, SizeGuideTemplate, SizeGuideTemplateItem, ClothingType, Category, ClothingTypeSlug } from './types';
+import { User, Product, InventoryItem, Color, Size, DiffSyncPayload, SizeGuideTemplate, SizeGuideTemplateItem, ClothingType, Category, ClothingTypeSlug, Order, OrderItem, CreateOrderInput, OrderStatus } from './types';
 
 const DIRECTUS_URL = ((import.meta as any).env?.VITE_DIRECTUS_URL as string) || '/api/directus';
 
@@ -36,68 +36,112 @@ class DirectusService {
 
   // --- AUTHENTICATION API ---
   async login(email: string, password: string): Promise<User> {
-    const response = await fetch(`${DIRECTUS_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch(`${DIRECTUS_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      throw new Error(errBody?.errors?.[0]?.message || 'شناسه کاربری یا رمز عبور نامعتبر است');
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody?.errors?.[0]?.message || 'شناسه کاربری یا رمز عبور نامعتبر است');
+      }
+
+      const data = await response.json();
+      const token = data?.data?.access_token;
+
+      // Fetch user profile info
+      const userProfileRes = await fetch(`${DIRECTUS_URL}/users/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!userProfileRes.ok) {
+        throw new Error('خطا در دریافت اطلاعات پروفایل از سرور');
+      }
+
+      const profileData = await userProfileRes.json();
+      const profile = profileData?.data;
+
+      const loggedUser: User = {
+        id: profile.id,
+        email: profile.email,
+        shop_name: profile.description || `${profile.first_name || 'My'} Store`,
+        shop_slug: profile.last_name?.toLowerCase() || `shop-${profile.id.substring(0, 5)}`,
+        token: token
+      };
+
+      this.user = loggedUser;
+      localStorage.setItem('tankhor_user', JSON.stringify(loggedUser));
+      return loggedUser;
+    } catch (err: any) {
+      console.warn("Directus login network error, checking offline session fallback:", err);
+      // Check if previously logged in user session exists in localStorage
+      const savedUserStr = localStorage.getItem('tankhor_user') || localStorage.getItem('sizegrid_user');
+      if (savedUserStr) {
+        try {
+          const savedUser = JSON.parse(savedUserStr);
+          this.user = savedUser;
+          return savedUser;
+        } catch (e) {}
+      }
+
+      // If no saved user and network is offline, create/allow local offline merchant session
+      if (typeof navigator !== 'undefined' && (!navigator.onLine || err?.message?.includes('fetch') || err instanceof TypeError)) {
+        const offlineUser: User = {
+          id: 'offline-merchant-local',
+          email: email || 'offline@tankhor.local',
+          shop_name: 'فروشگاه آفلاین من',
+          shop_slug: 'offline-store'
+        };
+        this.user = offlineUser;
+        localStorage.setItem('tankhor_user', JSON.stringify(offlineUser));
+        return offlineUser;
+      }
+
+      throw err;
     }
-
-    const data = await response.json();
-    const token = data?.data?.access_token;
-
-    // Fetch user profile info
-    const userProfileRes = await fetch(`${DIRECTUS_URL}/users/me`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (!userProfileRes.ok) {
-      throw new Error('خطا در دریافت اطلاعات پروفایل از سرور');
-    }
-
-    const profileData = await userProfileRes.json();
-    const profile = profileData?.data;
-
-    const loggedUser: User = {
-      id: profile.id,
-      email: profile.email,
-      shop_name: profile.description || `${profile.first_name || 'My'} Store`,
-      shop_slug: profile.last_name?.toLowerCase() || `shop-${profile.id.substring(0, 5)}`,
-      token: token
-    };
-
-    this.user = loggedUser;
-    localStorage.setItem('tankhor_user', JSON.stringify(loggedUser));
-    return loggedUser;
   }
 
   async register(email: string, password: string, shopName: string, shopSlug: string): Promise<User> {
     const cleanSlug = shopSlug.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '');
 
-    const response = await fetch(`${DIRECTUS_URL}/users`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
-        first_name: shopName,
-        last_name: cleanSlug,
-        description: shopName,
-        role: "5e13d3bc-e293-4720-90b5-d7a02871d34a"
-      }),
-    });
+    try {
+      const response = await fetch(`${DIRECTUS_URL}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          first_name: shopName,
+          last_name: cleanSlug,
+          description: shopName,
+          role: "5e13d3bc-e293-4720-90b5-d7a02871d34a"
+        }),
+      });
 
-    if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      throw new Error(errBody?.errors?.[0]?.message || 'ثبت‌نام با خطا مواجه شد. ممکن است ایمیل قبلاً ثبت شده باشد.');
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody?.errors?.[0]?.message || 'ثبت‌نام با خطا مواجه شد. ممکن است ایمیل قبلاً ثبت شده باشد.');
+      }
+
+      // Automatically login after successful signup
+      return this.login(email, password);
+    } catch (err: any) {
+      console.warn("Registration network error, falling back to local session:", err);
+      if (typeof navigator !== 'undefined' && (!navigator.onLine || err?.message?.includes('fetch') || err instanceof TypeError)) {
+        const offlineUser: User = {
+          id: 'offline-merchant-local',
+          email: email,
+          shop_name: shopName || 'فروشگاه آفلاین من',
+          shop_slug: cleanSlug || 'offline-store'
+        };
+        this.user = offlineUser;
+        localStorage.setItem('tankhor_user', JSON.stringify(offlineUser));
+        return offlineUser;
+      }
+      throw err;
     }
-
-    // Automatically login after successful signup
-    return this.login(email, password);
   }
 
   logout() {
@@ -107,6 +151,29 @@ class DirectusService {
   }
 
   getCurrentUser(): User | null {
+    if (!this.user && typeof window !== 'undefined') {
+      const savedUser = localStorage.getItem('tankhor_user') || localStorage.getItem('sizegrid_user');
+      if (savedUser) {
+        try {
+          this.user = JSON.parse(savedUser);
+        } catch (e) {
+          this.user = null;
+        }
+      }
+    }
+
+    // Default offline session if no logged in user exists yet
+    if (!this.user && typeof window !== 'undefined') {
+      const offlineUser: User = {
+        id: 'offline-merchant-local',
+        email: 'offline@tankhor.local',
+        shop_name: 'فروشگاه آفلاین من',
+        shop_slug: 'offline-store'
+      };
+      this.user = offlineUser;
+      localStorage.setItem('tankhor_user', JSON.stringify(offlineUser));
+    }
+
     return this.user;
   }
 
@@ -1420,6 +1487,145 @@ class DirectusService {
     } catch (e) {
       console.warn("Public storefront fetch error", e);
       return null;
+    }
+  }
+
+  // --- ORDERS API ---
+  async getOrders(): Promise<Order[]> {
+    try {
+      const authHeader = this.user?.token ? { 'Authorization': `Bearer ${this.user.token}` } : {};
+      const response = await fetch(`${DIRECTUS_URL}/items/orders?fields=*,order_items.*&sort=-date_created`, {
+        headers: { ...authHeader }
+      });
+      if (!response.ok) {
+        console.warn("Failed to fetch orders from Directus");
+        return [];
+      }
+      const data = await response.json();
+      return data?.data || [];
+    } catch (err) {
+      console.warn("Error fetching orders from Directus:", err);
+      return [];
+    }
+  }
+
+  async getOrderById(id: number): Promise<Order | null> {
+    try {
+      const authHeader = this.user?.token ? { 'Authorization': `Bearer ${this.user.token}` } : {};
+      const response = await fetch(`${DIRECTUS_URL}/items/orders/${id}?fields=*,order_items.*`, {
+        headers: { ...authHeader }
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data?.data || null;
+    } catch (err) {
+      console.warn("Error fetching order by ID:", err);
+      return null;
+    }
+  }
+
+  async createOrder(orderInput: CreateOrderInput): Promise<Order> {
+    try {
+      const authHeader = this.user?.token ? { 'Authorization': `Bearer ${this.user.token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+      
+      const calculatedTotal = orderInput.items.reduce((sum, item) => sum + (item.item_quantity * item.item_price), 0);
+      const totalAmount = orderInput.order_total && orderInput.order_total > 0 ? orderInput.order_total : calculatedTotal;
+
+      // 1. Create order record in orders collection
+      const orderRes = await fetch(`${DIRECTUS_URL}/items/orders`, {
+        method: 'POST',
+        headers: { ...authHeader },
+        body: JSON.stringify({
+          status: orderInput.status || 'published',
+          order_total: totalAmount,
+          date_created: new Date().toISOString()
+        })
+      });
+
+      if (!orderRes.ok) {
+        const errBody = await orderRes.json().catch(() => ({}));
+        throw new Error(errBody?.errors?.[0]?.message || 'خطا در ثبت سفارش در سرور ابری');
+      }
+
+      const orderData = await orderRes.json();
+      const createdOrder: Order = orderData?.data;
+      const createdItems: OrderItem[] = [];
+
+      // 2. Create order_items and deduct from inventory stock
+      for (const item of orderInput.items) {
+        const itemTotal = item.item_quantity * item.item_price;
+        const itemRes = await fetch(`${DIRECTUS_URL}/items/order_items`, {
+          method: 'POST',
+          headers: { ...authHeader },
+          body: JSON.stringify({
+            order_id: createdOrder.id,
+            item_inventory: item.item_inventory,
+            item_quantity: item.item_quantity,
+            item_price: item.item_price,
+            item_total: itemTotal
+          })
+        });
+
+        if (itemRes.ok) {
+          const itemData = await itemRes.json();
+          createdItems.push(itemData?.data);
+        }
+
+        // 3. Deduct stock from inventory table
+        try {
+          const invRes = await fetch(`${DIRECTUS_URL}/items/inventory/${item.item_inventory}`, {
+            headers: { ...authHeader }
+          });
+          if (invRes.ok) {
+            const invData = await invRes.json();
+            const currentStock = Number(invData?.data?.stock) || 0;
+            const updatedStock = Math.max(0, currentStock - item.item_quantity);
+
+            await fetch(`${DIRECTUS_URL}/items/inventory/${item.item_inventory}`, {
+              method: 'PATCH',
+              headers: { ...authHeader },
+              body: JSON.stringify({ stock: updatedStock })
+            });
+          }
+        } catch (invErr) {
+          console.warn(`Failed to deduct inventory stock for item_inventory ${item.item_inventory}:`, invErr);
+        }
+      }
+
+      createdOrder.order_items = createdItems;
+      return createdOrder;
+    } catch (err: any) {
+      console.error("Failed to create order in Directus:", err);
+      throw err;
+    }
+  }
+
+  async updateOrderStatus(id: number, status: OrderStatus | string): Promise<boolean> {
+    try {
+      const authHeader = this.user?.token ? { 'Authorization': `Bearer ${this.user.token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+      const response = await fetch(`${DIRECTUS_URL}/items/orders/${id}`, {
+        method: 'PATCH',
+        headers: { ...authHeader },
+        body: JSON.stringify({ status })
+      });
+      return response.ok;
+    } catch (err) {
+      console.warn("Failed to update order status:", err);
+      return false;
+    }
+  }
+
+  async deleteOrder(id: number): Promise<boolean> {
+    try {
+      const authHeader = this.user?.token ? { 'Authorization': `Bearer ${this.user.token}` } : {};
+      const response = await fetch(`${DIRECTUS_URL}/items/orders/${id}`, {
+        method: 'DELETE',
+        headers: { ...authHeader }
+      });
+      return response.ok;
+    } catch (err) {
+      console.warn("Failed to delete order:", err);
+      return false;
     }
   }
 }

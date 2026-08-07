@@ -1,7 +1,8 @@
 import { LocalStorageAdapter } from './localAdapter';
 import { DirectusCloudAdapter } from './cloudAdapter';
 import { IStorageAdapter, StorageMode, SyncStats, SyncQueueItem } from './types';
-import { Product, Category, Size, Color, SizeGuideTemplate, InventoryItem, ClothingTypeSlug, DiffSyncPayload } from '../types';
+import { Product, Category, Size, Color, SizeGuideTemplate, InventoryItem, ClothingTypeSlug, DiffSyncPayload, Order, CreateOrderInput, OrderStatus } from '../types';
+import { DirectusAPI } from '../directus';
 
 export class StorageSyncManager implements IStorageAdapter {
   private localAdapter: LocalStorageAdapter;
@@ -17,7 +18,13 @@ export class StorageSyncManager implements IStorageAdapter {
     this.activeMode = this.localAdapter.getMode();
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => this.notifyListeners());
+      window.addEventListener('online', () => {
+        if (this.activeMode === 'cloud_synced') {
+          this.syncLocalToCloud().catch(() => {});
+        } else {
+          this.notifyListeners();
+        }
+      });
       window.addEventListener('offline', () => this.notifyListeners());
     }
   }
@@ -45,6 +52,9 @@ export class StorageSyncManager implements IStorageAdapter {
     this.activeMode = mode;
     this.localAdapter.setMode(mode);
     this.cloudAdapter.setMode(mode);
+    if (mode === 'cloud_synced') {
+      this.syncLocalToCloud().catch(err => console.warn('Sync error on mode switch:', err));
+    }
     this.notifyListeners();
   }
 
@@ -70,43 +80,178 @@ export class StorageSyncManager implements IStorageAdapter {
     this.lastError = null;
     this.notifyListeners();
 
-    const queue = this.localAdapter.getPendingSyncQueue();
     let syncedCount = 0;
 
     try {
-      for (const item of queue) {
-        try {
-          if (item.entityType === 'product') {
-            if (item.operation === 'create' || item.operation === 'update') {
-              await this.cloudAdapter.saveProduct(item.payload);
-            } else if (item.operation === 'delete') {
-              await this.cloudAdapter.deleteProduct(Number(item.entityId));
-            }
-          } else if (item.entityType === 'category') {
-            if (item.operation === 'create') {
-              await this.cloudAdapter.saveCategory(item.payload.name, item.payload.system_type, item.payload.clothing_type_slug);
-            } else if (item.operation === 'delete') {
-              await this.cloudAdapter.deleteCategory(Number(item.entityId));
-            }
-          } else if (item.entityType === 'size_template') {
-            if (item.operation === 'create' || item.operation === 'update') {
-              await this.cloudAdapter.saveSizeGuideTemplate(item.payload);
-            } else if (item.operation === 'delete') {
-              await this.cloudAdapter.deleteSizeGuideTemplate(Number(item.entityId));
-            }
-          } else if (item.entityType === 'inventory') {
-            if (typeof item.payload === 'object' && 'create' in item.payload) {
-              await this.cloudAdapter.syncInventoryDiff(Number(item.entityId), item.payload);
-            }
+      // 1. Fetch current cloud state and local state
+      const [cloudProds, localProds, cloudCats, localCats, cloudTpls, localTpls, localInventory] = await Promise.all([
+        this.cloudAdapter.getProducts().catch(() => []),
+        this.localAdapter.getProducts().catch(() => []),
+        this.cloudAdapter.getCategories().catch(() => []),
+        this.localAdapter.getCategories().catch(() => []),
+        this.cloudAdapter.getSizeGuideTemplates().catch(() => []),
+        this.localAdapter.getSizeGuideTemplates().catch(() => []),
+        this.localAdapter.getInventory().catch(() => [])
+      ]);
+
+      // 2. Sync Categories created locally
+      const catIdMap = new Map<number, number>(); // localId -> cloudId
+      for (const lc of localCats) {
+        const cloudCatMatch = cloudCats.find(cc => cc.id === lc.id || cc.name === lc.name || cc.name_fa === lc.name);
+        if (cloudCatMatch) {
+          catIdMap.set(lc.id, cloudCatMatch.id);
+        } else {
+          try {
+            const savedCat = await DirectusAPI.createCategory(lc.name, lc.system_type, lc.clothing_type_slug);
+            catIdMap.set(lc.id, savedCat.id);
+            syncedCount++;
+          } catch (e) {
+            console.warn('Failed to push local category to cloud:', e);
           }
-          syncedCount++;
-        } catch (err: any) {
-          console.warn(`Error syncing queue item ${item.id}:`, err);
         }
       }
 
-      // Clear sync queue on local adapter after sync attempt
+      // 3. Sync Size Guide Templates created locally
+      const tplIdMap = new Map<number, number>(); // localId -> cloudId
+      for (const lt of localTpls) {
+        const cloudTplMatch = cloudTpls.find(ct => ct.id === lt.id || ct.name === lt.name);
+        if (cloudTplMatch) {
+          tplIdMap.set(lt.id, cloudTplMatch.id);
+        } else {
+          try {
+            const savedTpl = await DirectusAPI.createSizeGuideTemplate(lt.name, lt.measurements || [], lt.clothing_type_slug || 'tops');
+            tplIdMap.set(lt.id, savedTpl.id);
+            syncedCount++;
+          } catch (e) {
+            console.warn('Failed to push local template to cloud:', e);
+          }
+        }
+      }
+
+      // 4. Sync Products and Inventory
+      const prodIdMap = new Map<number, number>(); // localProductId -> cloudProductId
+
+      for (const lp of localProds) {
+        const resolvedCatId = lp.category_id ? (catIdMap.get(lp.category_id) || lp.category_id) : undefined;
+        const resolvedTplId = lp.size_guide_template_id ? (tplIdMap.get(lp.size_guide_template_id) || lp.size_guide_template_id) : undefined;
+
+        let cloudMatch = cloudProds.find(cp => cp.id === lp.id);
+        if (!cloudMatch) {
+          cloudMatch = cloudProds.find(cp => cp.name_fa === lp.name_fa || cp.name_en === lp.name_fa);
+        }
+
+        let finalCloudProduct: Product | null = null;
+
+        if (cloudMatch) {
+          try {
+            finalCloudProduct = await DirectusAPI.updateProduct(cloudMatch.id, {
+              ...lp,
+              category_id: resolvedCatId,
+              size_guide_template_id: resolvedTplId
+            });
+            syncedCount++;
+          } catch (e) {
+            try {
+              finalCloudProduct = await DirectusAPI.addProduct({
+                name_fa: lp.name_fa,
+                name_en: lp.name_en || lp.name_fa,
+                description_fa: lp.description_fa,
+                description_en: lp.description_en,
+                base_price: lp.base_price,
+                category: lp.category,
+                category_id: resolvedCatId,
+                clothing_type_slug: lp.clothing_type_slug,
+                image: lp.image,
+                size_guide_template_id: resolvedTplId
+              });
+              syncedCount++;
+            } catch (addErr) {
+              console.warn('Failed to add product to cloud:', addErr);
+            }
+          }
+        } else {
+          try {
+            finalCloudProduct = await DirectusAPI.addProduct({
+              name_fa: lp.name_fa,
+              name_en: lp.name_en || lp.name_fa,
+              description_fa: lp.description_fa,
+              description_en: lp.description_en,
+              base_price: lp.base_price,
+              category: lp.category,
+              category_id: resolvedCatId,
+              clothing_type_slug: lp.clothing_type_slug,
+              image: lp.image,
+              size_guide_template_id: resolvedTplId
+            });
+            syncedCount++;
+          } catch (addErr) {
+            console.warn('Failed to add product to cloud:', addErr);
+          }
+        }
+
+        if (finalCloudProduct) {
+          prodIdMap.set(lp.id, finalCloudProduct.id);
+
+          // Push local inventory matrix items for this product
+          const prodInv = localInventory.filter(inv => inv.product_id === lp.id);
+          if (prodInv.length > 0) {
+            try {
+              const mappedInv = prodInv.map(inv => ({
+                ...inv,
+                product_id: finalCloudProduct!.id
+              }));
+              await DirectusAPI.syncInventory(finalCloudProduct.id, mappedInv);
+              syncedCount++;
+            } catch (e) {
+              console.warn(`Failed to sync inventory for product ${finalCloudProduct.id}:`, e);
+            }
+          }
+        }
+      }
+
+      // 5. Sync Orders created locally
+      const localOrders = await this.localAdapter.getOrders().catch(() => []);
+      const cloudOrders = await DirectusAPI.getOrders().catch(() => []);
+      for (const lo of localOrders) {
+        const cloudOrderMatch = cloudOrders.find(co => co.id === lo.id);
+        if (!cloudOrderMatch && lo.order_items && lo.order_items.length > 0) {
+          try {
+            await DirectusAPI.createOrder({
+              status: lo.status,
+              order_total: lo.order_total,
+              items: lo.order_items.map(item => ({
+                item_inventory: item.item_inventory,
+                item_quantity: item.item_quantity,
+                item_price: item.item_price
+              }))
+            });
+            syncedCount++;
+          } catch (e) {
+            console.warn('Failed to push local order to cloud:', e);
+          }
+        }
+      }
+
+      // 6. Clear pending sync queue
       this.localAdapter.clearPendingSyncQueue();
+
+      // 6. Fetch fresh full dataset from Cloud and sync local storage cache
+      const [freshProds, freshCats, freshSizes, freshColors, freshTpls, freshInv] = await Promise.all([
+        DirectusAPI.getProducts().catch(() => []),
+        DirectusAPI.getCategories().catch(() => []),
+        DirectusAPI.getSizes().catch(() => []),
+        DirectusAPI.getColors().catch(() => []),
+        DirectusAPI.getSizeGuideTemplates().catch(() => []),
+        DirectusAPI.getAllInventory().catch(() => [])
+      ]);
+
+      if (freshProds.length > 0) this.localAdapter.setProductsCache(freshProds);
+      if (freshCats.length > 0) this.localAdapter.setCategoriesCache(freshCats);
+      if (freshSizes.length > 0) this.localAdapter.setSizesCache(freshSizes);
+      if (freshColors.length > 0) this.localAdapter.setColorsCache(freshColors);
+      if (freshTpls.length > 0) this.localAdapter.setTemplatesCache(freshTpls);
+      if (freshInv.length > 0) this.localAdapter.setInventoryCache(freshInv);
+
       localStorage.setItem('tankhor_local_last_sync_time', Date.now().toString());
 
       return { success: true, syncedCount };
@@ -166,6 +311,12 @@ export class StorageSyncManager implements IStorageAdapter {
     return size;
   }
 
+  async deleteSize(id: number): Promise<boolean> {
+    const res = await this.activeAdapter.deleteSize(id);
+    this.notifyListeners();
+    return res;
+  }
+
   async getColors(): Promise<Color[]> {
     return this.activeAdapter.getColors();
   }
@@ -204,6 +355,33 @@ export class StorageSyncManager implements IStorageAdapter {
 
   async syncInventoryDiff(productId: number, payload: DiffSyncPayload): Promise<boolean> {
     const res = await this.activeAdapter.syncInventoryDiff(productId, payload);
+    this.notifyListeners();
+    return res;
+  }
+
+  // --- ORDERS ---
+  async getOrders(): Promise<Order[]> {
+    return this.activeAdapter.getOrders();
+  }
+
+  async getOrderById(id: number): Promise<Order | null> {
+    return this.activeAdapter.getOrderById(id);
+  }
+
+  async createOrder(orderInput: CreateOrderInput): Promise<Order> {
+    const order = await this.activeAdapter.createOrder(orderInput);
+    this.notifyListeners();
+    return order;
+  }
+
+  async updateOrderStatus(id: number, status: OrderStatus | string): Promise<boolean> {
+    const res = await this.activeAdapter.updateOrderStatus(id, status);
+    this.notifyListeners();
+    return res;
+  }
+
+  async deleteOrder(id: number): Promise<boolean> {
+    const res = await this.activeAdapter.deleteOrder(id);
     this.notifyListeners();
     return res;
   }

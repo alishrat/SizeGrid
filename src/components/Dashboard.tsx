@@ -4,7 +4,10 @@ import { DirectusAPI } from '../directus';
 import { storageManager, SyncStats } from '../storage';
 import { useRouter } from './Router';
 import { Product, InventoryItem, Color, Size, SizeGuideTemplate, SizeGuideTemplateItem, ClothingTypeSlug } from '../types';
+import { AppUpdateWidget } from './AppUpdateWidget';
+import { OrdersManager } from './OrdersManager';
 import {
+  ShoppingCart,
   Grid3X3,
   Package,
   Sliders,
@@ -190,7 +193,7 @@ interface DashboardProps {
   setDarkMode: (val: boolean) => void;
 }
 
-type ActiveTab = 'products' | 'warehouse' | 'categories' | 'templates' | 'sizes' | 'compressor' | 'settings';
+type ActiveTab = 'products' | 'orders' | 'warehouse' | 'categories' | 'templates' | 'sizes' | 'compressor' | 'settings';
 type EditSubTab = 'general' | 'guides' | 'matrix';
 
 export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: DashboardProps) {
@@ -213,8 +216,23 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
   useEffect(() => {
     const unsubscribe = storageManager.subscribe((stats) => {
       setSyncStats(stats);
+      loadDashboardData();
     });
-    return () => unsubscribe();
+
+    const handleFocus = () => {
+      loadDashboardData();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+    }
+
+    return () => {
+      unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleFocus);
+      }
+    };
   }, []);
 
   const handleManualSync = async () => {
@@ -359,11 +377,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     setError('');
     setSuccess('');
     try {
-      const created = await DirectusAPI.createCategory(newCatName.trim(), Number(newCatSystemType), newCatClothingTypeSlug);
+      const created = await storageManager.saveCategory(newCatName.trim(), Number(newCatSystemType), newCatClothingTypeSlug);
       setSuccess(isRtl ? "دسته‌بندی جدید با موفقیت اضافه شد." : "New category added successfully.");
       setNewCatName('');
       setShowAddCategoryModal(false);
-      const cats = await DirectusAPI.getCategories();
+      const cats = await storageManager.getCategories();
       setCategoriesList(cats);
       setProdFormCategory(created.name);
       setTimeout(() => setSuccess(''), 3500);
@@ -379,9 +397,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     setError('');
     setSuccess('');
     try {
-      await DirectusAPI.deleteCategory(id);
+      await storageManager.deleteCategory(id);
       setSuccess(isRtl ? "دسته‌بندی با موفقیت حذف شد." : "Category deleted successfully.");
-      const cats = await DirectusAPI.getCategories();
+      const cats = await storageManager.getCategories();
       setCategoriesList(cats);
       setTimeout(() => setSuccess(''), 3500);
     } catch (err: any) {
@@ -408,12 +426,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     setLoading(true);
     try {
       const [prodsList, colorsList, sizesList, allInv, templates, catsList] = await Promise.all([
-        DirectusAPI.getProducts(),
-        DirectusAPI.getColors(),
-        DirectusAPI.getSizes(),
-        DirectusAPI.getAllInventory(),
-        DirectusAPI.getSizeGuideTemplates(),
-        DirectusAPI.getCategories()
+        storageManager.getProducts(),
+        storageManager.getColors(),
+        storageManager.getSizes(),
+        storageManager.getInventory(),
+        storageManager.getSizeGuideTemplates(),
+        storageManager.getCategories()
       ]);
       setProducts(prodsList);
       setColors(colorsList);
@@ -552,7 +570,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
 
     try {
       // Fetch current inventory configuration
-      const inv = await DirectusAPI.getInventoryForProduct(prod.id);
+      const inv = await storageManager.getInventory(prod.id);
       
       const activeColors = Array.from(new Set(inv.map(i => i.color_id)));
       const activeSizes = Array.from(new Set(inv.map(i => i.size_id)));
@@ -577,7 +595,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       setMatrixGridState(gridState);
 
       // Fetch Sizing guides
-      const guides = await DirectusAPI.getSizeGuidesForProduct(prod.id);
+      let guides: any[] = [];
+      try {
+        guides = await DirectusAPI.getSizeGuidesForProduct(prod.id);
+      } catch (err) {
+        guides = [];
+      }
       setSizeGuidesList(guides);
 
       const formState: Record<string, any> = {};
@@ -709,23 +732,24 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       let savedProduct: Product;
       if (isEditingProd.id === 0) {
         // Add new
-        savedProduct = await DirectusAPI.addProduct(payload);
+        savedProduct = await storageManager.saveProduct(payload);
         setSuccess(isRtl ? "محصول با موفقیت ثبت شد. متغیرهای انبار اکنون خودکار ساخته شدند." : "Product registered. Stock variants created automatically.");
       } else {
         // Edit existing
-        savedProduct = await DirectusAPI.updateProduct(isEditingProd.id, payload);
+        savedProduct = await storageManager.saveProduct({ id: isEditingProd.id, ...payload });
         setSuccess(isRtl ? "اطلاعات کلی محصول با موفقیت به‌روزرسانی شد." : "Product profile updated successfully.");
       }
 
       // Automatically sync inventory combinations (N x M)
       // Retrieve current database inventory to check what already exists
-      const existingInventory = await DirectusAPI.getInventoryForProduct(savedProduct.id);
-      const targetCombinations: Array<Omit<InventoryItem, 'id'>> = [];
+      const existingInventory = await storageManager.getInventory(savedProduct.id);
+      const targetCombinations: InventoryItem[] = [];
 
       selectedColorIds.forEach(colId => {
         selectedSizeIds.forEach(szId => {
           const matched = existingInventory.find(i => i.color_id === colId && i.size_id === szId);
           targetCombinations.push({
+            id: matched ? matched.id : 0,
             product_id: savedProduct.id,
             color_id: colId,
             size_id: szId,
@@ -736,7 +760,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       });
 
       // Synchronize database records
-      await DirectusAPI.syncInventory(savedProduct.id, targetCombinations);
+      await storageManager.updateInventory(targetCombinations);
 
       // Refresh listings
       await loadDashboardData();
@@ -759,7 +783,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
   const handleDeleteProduct = async (id: number) => {
     if (!confirm(isRtl ? "آیا از حذف این محصول و کل موجودی‌های متناظر آن اطمینان دارید؟" : "Are you sure you want to delete this product and its stock matrix?")) return;
     try {
-      await DirectusAPI.deleteProduct(id);
+      await storageManager.deleteProduct(id);
       await loadDashboardData();
       setSuccess(isRtl ? "محصول با موفقیت حذف شد." : "Product deleted successfully.");
       setTimeout(() => setSuccess(''), 3000);
@@ -790,7 +814,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     setError('');
 
     // Transform active enabling matrix cells to match InventoryItem payload
-    const updatedPayload: Array<Omit<InventoryItem, 'id'>> = [];
+    const updatedPayload: InventoryItem[] = [];
     
     selectedColorIds.forEach(colId => {
       selectedSizeIds.forEach(szId => {
@@ -798,6 +822,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
         const cell = matrixGridState[key];
         if (cell && cell.enabled) {
           updatedPayload.push({
+            id: 0,
             product_id: isEditingProd.id,
             color_id: colId,
             size_id: szId,
@@ -809,11 +834,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     });
 
     try {
-      await DirectusAPI.syncInventory(isEditingProd.id, updatedPayload);
+      await storageManager.updateInventory(updatedPayload);
       setSuccess(isRtl ? "ماتریس موجودی محصول با موفقیت ذخیره شد." : "Product inventory matrix synced successfully.");
       setTimeout(() => setSuccess(''), 3000);
       
       // Reload states
+      await loadDashboardData();
       await triggerEditProductMode(isEditingProd);
     } catch (e) {
       setError(isRtl ? "خطا در ثبت ماتریس موجودی کالا." : "Failed to save inventory matrix.");
@@ -998,15 +1024,16 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     const targetPrice = localPriceEdits[invItem.id] !== undefined ? localPriceEdits[invItem.id] : invItem.price;
 
     try {
-      await DirectusAPI.updateInventoryItem(invItem.id, {
+      await storageManager.updateInventory([{
+        ...invItem,
         stock: Number(targetStock),
         price: Number(targetPrice)
-      });
+      }]);
       setSuccess(isRtl ? "موجودی با موفقیت به‌روزرسانی شد." : "Stock item updated successfully.");
       setTimeout(() => setSuccess(''), 3000);
 
       // Refresh database records
-      const allInv = await DirectusAPI.getAllInventory();
+      const allInv = await storageManager.getInventory();
       setWarehouseInventory(allInv);
     } catch (e) {
       setError(isRtl ? "خطا در ذخیره‌سازی اطلاعات تغییر یافته." : "Failed to update item values.");
@@ -1100,12 +1127,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     setError('');
     setSuccess('');
     try {
-      await DirectusAPI.createSize(newSizeName.trim(), Number(newSizeSortOrder));
+      await storageManager.saveSize(newSizeName.trim(), Number(newSizeSortOrder));
       setSuccess(isRtl ? "سایز جدید با موفقیت اضافه شد." : "New custom size added successfully.");
       setNewSizeName('');
       setNewSizeSortOrder(prev => prev + 2);
       // Reload sizes list
-      const sizesList = await DirectusAPI.getSizes();
+      const sizesList = await storageManager.getSizes();
       setSizes(sizesList.sort((a, b) => a.sort_order - b.sort_order));
       setTimeout(() => setSuccess(''), 3500);
     } catch (err: any) {
@@ -1122,10 +1149,10 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
     setError('');
     setSuccess('');
     try {
-      await DirectusAPI.deleteSize(id);
+      await storageManager.deleteSize(id);
       setSuccess(isRtl ? "سایز با موفقیت حذف شد." : "Custom size deleted successfully.");
       // Reload sizes list
-      const sizesList = await DirectusAPI.getSizes();
+      const sizesList = await storageManager.getSizes();
       setSizes(sizesList.sort((a, b) => a.sort_order - b.sort_order));
       setTimeout(() => setSuccess(''), 3500);
     } catch (err: any) {
@@ -1225,6 +1252,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             </button>
 
             <button
+              onClick={() => { setActiveTab('orders'); setIsEditingProd(null); }}
+              className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'orders' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>{isRtl ? "سفارشات و فاکتورها" : "Orders & POS"}</span>
+            </button>
+
+            <button
               onClick={() => { setActiveTab('warehouse'); setIsEditingProd(null); }}
               className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center gap-3 transition-all ${activeTab === 'warehouse' ? 'bg-sky-600 text-white shadow-sm' : (darkMode ? 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100')}`}
             >
@@ -1317,6 +1352,13 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                 <Package className="w-4 h-4" />
               </button>
               <button
+                onClick={() => { setActiveTab('orders'); setIsEditingProd(null); }}
+                className={`p-1.5 rounded-md ${activeTab === 'orders' ? 'bg-sky-600 text-white' : 'text-neutral-400'}`}
+                title={isRtl ? "سفارشات" : "Orders"}
+              >
+                <ShoppingCart className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => { setActiveTab('warehouse'); setIsEditingProd(null); }}
                 className={`p-1.5 rounded-md ${activeTab === 'warehouse' ? 'bg-sky-600 text-white' : 'text-neutral-400'}`}
                 title={isRtl ? "انبار" : "Warehouse"}
@@ -1358,6 +1400,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               <span className="hidden sm:inline">/</span>
               <span className="text-sky-500 font-black">
                 {activeTab === 'products' ? (isEditingProd ? (isEditingProd.id === 0 ? t.add_product : t.edit_product) : (isRtl ? "کاتالوگ کالاها" : "Catalog")) : ''}
+                {activeTab === 'orders' ? (isRtl ? "مدیریت سفارشات و صدور فاکتور" : "Orders & Invoice POS") : ''}
                 {activeTab === 'warehouse' ? (isRtl ? "مدیریت انبار" : "Warehouse") : ''}
                 {activeTab === 'templates' ? (isRtl ? "قالب‌های سایزبندی" : "Size Templates") : ''}
                 {activeTab === 'sizes' ? (isRtl ? "مدیریت سایزها" : "Size Management") : ''}
@@ -1368,6 +1411,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Desktop App Update Widget Badge */}
+            <AppUpdateWidget compact />
+
             {/* Directus Cloud Sync Icon Button */}
             <button
               onClick={handleManualSync}
@@ -1432,6 +1478,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
             </div>
           ) : (
             <>
+              {/* TAB: ORDERS & POS */}
+              {activeTab === 'orders' && (
+                <OrdersManager
+                  t={(key: string) => t[key] || key}
+                  lang={lang}
+                />
+              )}
+
               {/* TAB 1: PRODUCTS MANAGER */}
               {activeTab === 'products' && (
                 <div className="space-y-6">
@@ -3325,14 +3379,14 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                               }
 
                               if (editingTemplate.id === 0) {
-                                await DirectusAPI.createSizeGuideTemplate(templateFormName, list, templateFormClothingType);
+                                await storageManager.saveSizeGuideTemplate({ name: templateFormName, measurements: list, clothing_type_slug: templateFormClothingType });
                                 setSuccess(isRtl ? "قالب با موفقیت ایجاد شد." : "Template registered successfully.");
                               } else {
-                                await DirectusAPI.updateSizeGuideTemplate(editingTemplate.id, templateFormName, list, templateFormClothingType);
+                                await storageManager.saveSizeGuideTemplate({ id: editingTemplate.id, name: templateFormName, measurements: list, clothing_type_slug: templateFormClothingType });
                                 setSuccess(isRtl ? "تغییرات قالب با موفقیت ذخیره شد." : "Template specs saved successfully.");
                               }
 
-                              const res = await DirectusAPI.getSizeGuideTemplates();
+                              const res = await storageManager.getSizeGuideTemplates();
                               setTemplatesList(res);
                               setEditingTemplate(null);
                             } catch (err: any) {
@@ -3419,8 +3473,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                     onClick={async () => {
                                       if (confirm(isRtl ? `آیا از حذف قالب "${tpl.name}" اطمینان دارید؟ کالاها به تنظیمات اندازه اختصاصی تغییر وضعیت خواهند داد.` : `Delete template "${tpl.name}"? linked products will fall back to direct specs.`)) {
                                         try {
-                                          await DirectusAPI.deleteSizeGuideTemplate(tpl.id);
-                                          const list = await DirectusAPI.getSizeGuideTemplates();
+                                          await storageManager.deleteSizeGuideTemplate(tpl.id);
+                                          const list = await storageManager.getSizeGuideTemplates();
                                           setTemplatesList(list);
                                           setSuccess(isRtl ? "قالب سایزبندی حذف شد." : "Template deleted successfully.");
                                         } catch (err) {
@@ -3958,6 +4012,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                         </button>
                       </div>
                     )}
+                  </div>
+
+                  {/* Software Update Card */}
+                  <div className={`pt-6 border-t ${darkMode ? 'border-white/10' : 'border-neutral-200'}`}>
+                    <AppUpdateWidget />
                   </div>
                 </div>
               )}

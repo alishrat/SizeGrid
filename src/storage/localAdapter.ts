@@ -1,4 +1,4 @@
-import { Product, Category, Size, Color, SizeGuideTemplate, InventoryItem, ClothingTypeSlug, DiffSyncPayload } from '../types';
+import { Product, Category, Size, Color, SizeGuideTemplate, InventoryItem, ClothingTypeSlug, DiffSyncPayload, Order, OrderItem, CreateOrderInput, OrderStatus } from '../types';
 import { IStorageAdapter, StorageMode, SyncQueueItem, SyncStats } from './types';
 
 const STORAGE_KEYS = {
@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   COLORS: 'tankhor_local_colors_v1',
   TEMPLATES: 'tankhor_local_templates_v1',
   INVENTORY: 'tankhor_local_inventory_v1',
+  ORDERS: 'tankhor_local_orders_v1',
   SYNC_QUEUE: 'tankhor_local_sync_queue_v1',
   LAST_SYNC: 'tankhor_local_last_sync_time',
   STORAGE_MODE: 'tankhor_storage_mode'
@@ -319,6 +320,14 @@ export class LocalStorageAdapter implements IStorageAdapter {
     return newSize;
   }
 
+  async deleteSize(id: number): Promise<boolean> {
+    const sizes = await this.getSizes();
+    const updated = sizes.filter(s => s.id !== id);
+    this.setItem(STORAGE_KEYS.SIZES, updated);
+    this.recordSyncQueueItem('size', id, 'delete', { id });
+    return true;
+  }
+
   async getColors(): Promise<Color[]> {
     return this.getItem<Color[]>(STORAGE_KEYS.COLORS, []);
   }
@@ -387,14 +396,64 @@ export class LocalStorageAdapter implements IStorageAdapter {
 
   async updateInventory(items: InventoryItem[]): Promise<boolean> {
     const inventory = await this.getInventory();
-    for (const item of items) {
-      const idx = inventory.findIndex(inv => inv.id === item.id);
+    if (items.length === 0) return true;
+
+    // Calculate maximum current ID in local inventory to prevent ID collisions
+    let maxId = inventory.length > 0 ? Math.max(...inventory.map(i => Number(i.id) || 0)) : 1000;
+
+    // Check if items is a single item update (e.g., updating stock of 1 row in warehouse)
+    if (items.length === 1 && items[0].id && items[0].id !== 0) {
+      const singleItem = items[0];
+      const idx = inventory.findIndex(i => i.id === singleItem.id);
       if (idx !== -1) {
-        inventory[idx] = item;
+        inventory[idx] = { ...inventory[idx], ...singleItem };
       } else {
-        inventory.push(item);
+        inventory.push(singleItem);
+      }
+    } else {
+      // Group items by product_id to update matrix combinations for each product
+      const productIds = Array.from(new Set(items.map(i => i.product_id)));
+
+      for (const pid of productIds) {
+        const targetItemsForProd = items.filter(i => i.product_id === pid);
+        const existingProdInventory = inventory.filter(i => i.product_id === pid);
+        const newProdInventory: InventoryItem[] = [];
+
+        for (const targetItem of targetItemsForProd) {
+          let matched: InventoryItem | undefined;
+          if (targetItem.id && targetItem.id !== 0) {
+            matched = existingProdInventory.find(i => i.id === targetItem.id);
+          }
+          if (!matched) {
+            matched = existingProdInventory.find(i => i.color_id === targetItem.color_id && i.size_id === targetItem.size_id);
+          }
+
+          if (matched) {
+            newProdInventory.push({
+              ...matched,
+              stock: targetItem.stock,
+              price: targetItem.price
+            });
+          } else {
+            maxId++;
+            newProdInventory.push({
+              id: maxId,
+              product_id: pid,
+              color_id: targetItem.color_id,
+              size_id: targetItem.size_id,
+              stock: targetItem.stock,
+              price: targetItem.price
+            });
+          }
+        }
+
+        // Replace inventory for this product in the main array
+        const otherProductsInventory = inventory.filter(i => i.product_id !== pid);
+        inventory.length = 0;
+        inventory.push(...otherProductsInventory, ...newProdInventory);
       }
     }
+
     this.setItem(STORAGE_KEYS.INVENTORY, inventory);
     this.recordSyncQueueItem('inventory', 0, 'update', items);
     return true;
@@ -438,6 +497,115 @@ export class LocalStorageAdapter implements IStorageAdapter {
     this.setItem(STORAGE_KEYS.INVENTORY, updated);
     this.recordSyncQueueItem('inventory', productId, 'update', payload);
     return true;
+  }
+
+  // --- ORDERS ---
+  async getOrders(): Promise<Order[]> {
+    const orders = this.getItem<Order[]>(STORAGE_KEYS.ORDERS, []);
+    return orders.sort((a, b) => new Date(b.date_created || 0).getTime() - new Date(a.date_created || 0).getTime());
+  }
+
+  async getOrderById(id: number): Promise<Order | null> {
+    const orders = await this.getOrders();
+    return orders.find(o => o.id === id) || null;
+  }
+
+  async createOrder(orderInput: CreateOrderInput): Promise<Order> {
+    // 1. Get current local inventory
+    const currentInventory = this.getItem<InventoryItem[]>(STORAGE_KEYS.INVENTORY, []);
+    
+    // 2. Calculate item totals and deduct inventory stock
+    const createdItems: OrderItem[] = [];
+    let calculatedTotal = 0;
+
+    for (const itemInput of orderInput.items) {
+      const itemTotal = itemInput.item_quantity * itemInput.item_price;
+      calculatedTotal += itemTotal;
+
+      const orderItem: OrderItem = {
+        id: Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 1000),
+        item_inventory: itemInput.item_inventory,
+        item_quantity: itemInput.item_quantity,
+        item_price: itemInput.item_price,
+        item_total: itemTotal
+      };
+      createdItems.push(orderItem);
+
+      // Deduct stock from local inventory
+      const invIndex = currentInventory.findIndex(inv => inv.id === itemInput.item_inventory);
+      if (invIndex !== -1) {
+        currentInventory[invIndex].stock = Math.max(0, currentInventory[invIndex].stock - itemInput.item_quantity);
+      }
+    }
+
+    // Save updated local inventory
+    this.setItem(STORAGE_KEYS.INVENTORY, currentInventory);
+
+    // 3. Create Order
+    const newOrderId = Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 100);
+    const newOrder: Order = {
+      id: newOrderId,
+      status: orderInput.status || 'published',
+      order_total: orderInput.order_total && orderInput.order_total > 0 ? orderInput.order_total : calculatedTotal,
+      date_created: new Date().toISOString(),
+      order_items: createdItems
+    };
+
+    const orders = this.getItem<Order[]>(STORAGE_KEYS.ORDERS, []);
+    orders.push(newOrder);
+    this.setItem(STORAGE_KEYS.ORDERS, orders);
+
+    // Record in sync queue for cloud sync
+    this.recordSyncQueueItem('order', newOrderId, 'create', newOrder);
+
+    return newOrder;
+  }
+
+  async updateOrderStatus(id: number, status: OrderStatus | string): Promise<boolean> {
+    const orders = this.getItem<Order[]>(STORAGE_KEYS.ORDERS, []);
+    const idx = orders.findIndex(o => o.id === id);
+    if (idx === -1) return false;
+
+    orders[idx].status = status;
+    orders[idx].date_updated = new Date().toISOString();
+    this.setItem(STORAGE_KEYS.ORDERS, orders);
+    this.recordSyncQueueItem('order', id, 'update', { status });
+    return true;
+  }
+
+  async deleteOrder(id: number): Promise<boolean> {
+    const orders = this.getItem<Order[]>(STORAGE_KEYS.ORDERS, []);
+    const filtered = orders.filter(o => o.id !== id);
+    if (filtered.length === orders.length) return false;
+
+    this.setItem(STORAGE_KEYS.ORDERS, filtered);
+    this.recordSyncQueueItem('order', id, 'delete', { id });
+    return true;
+  }
+
+  // Cache synchronization helpers (without adding to sync queue)
+  setProductsCache(products: Product[]): void {
+    this.setItem(STORAGE_KEYS.PRODUCTS, products);
+  }
+
+  setCategoriesCache(categories: Category[]): void {
+    this.setItem(STORAGE_KEYS.CATEGORIES, categories);
+  }
+
+  setSizesCache(sizes: Size[]): void {
+    this.setItem(STORAGE_KEYS.SIZES, sizes);
+  }
+
+  setColorsCache(colors: Color[]): void {
+    this.setItem(STORAGE_KEYS.COLORS, colors);
+  }
+
+  setTemplatesCache(templates: SizeGuideTemplate[]): void {
+    this.setItem(STORAGE_KEYS.TEMPLATES, templates);
+  }
+
+  setInventoryCache(inventory: InventoryItem[]): void {
+    this.setItem(STORAGE_KEYS.INVENTORY, inventory);
   }
 
   // --- SYNC QUEUE & METRICS ---
