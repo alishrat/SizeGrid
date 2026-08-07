@@ -1,6 +1,18 @@
 import { User, Product, InventoryItem, Color, Size, DiffSyncPayload, SizeGuideTemplate, SizeGuideTemplateItem, ClothingType, Category, ClothingTypeSlug, Order, OrderItem, CreateOrderInput, OrderStatus } from './types';
 
-const DIRECTUS_URL = ((import.meta as any).env?.VITE_DIRECTUS_URL as string) || '/api/directus';
+const getDirectusUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_DIRECTUS_URL as string;
+  if (envUrl && envUrl.trim().length > 0) {
+    return envUrl.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.startsWith('http')) {
+    return `${window.location.origin}/api/directus`;
+  }
+  // Safe default for desktop standalone apps (Tauri / Electron on macOS / Windows)
+  return 'http://localhost:3000/api/directus';
+};
+
+const DIRECTUS_URL = getDirectusUrl();
 
 // Standard clothing sizes and color fallbacks in case public access is forbidden
 const FALLBACK_COLORS: Color[] = [
@@ -86,8 +98,16 @@ class DirectusService {
         } catch (e) {}
       }
 
-      // If no saved user and network is offline, create/allow local offline merchant session
-      if (typeof navigator !== 'undefined' && (!navigator.onLine || err?.message?.includes('fetch') || err instanceof TypeError)) {
+      // If explicit invalid credentials error thrown from server, throw it for UI display
+      if (err?.message === 'شناسه کاربری یا رمز عبور نامعتبر است') {
+        throw err;
+      }
+
+      // Check for offline mode, desktop WKWebView DOMException / pattern error, or general fetch network errors
+      const isPatternOrDOMError = err?.name === 'DOMException' || (err?.message && (err.message.includes('pattern') || err.message.includes('fetch')));
+      const isOfflineOrNetwork = (typeof navigator !== 'undefined' && !navigator.onLine) || err instanceof TypeError || isPatternOrDOMError || !err?.message;
+
+      if (isOfflineOrNetwork) {
         const offlineUser: User = {
           id: 'offline-merchant-local',
           email: email || 'offline@tankhor.local',
@@ -129,7 +149,10 @@ class DirectusService {
       return this.login(email, password);
     } catch (err: any) {
       console.warn("Registration network error, falling back to local session:", err);
-      if (typeof navigator !== 'undefined' && (!navigator.onLine || err?.message?.includes('fetch') || err instanceof TypeError)) {
+      const isPatternOrDOMError = err?.name === 'DOMException' || (err?.message && (err.message.includes('pattern') || err.message.includes('fetch')));
+      const isOfflineOrNetwork = (typeof navigator !== 'undefined' && !navigator.onLine) || err instanceof TypeError || isPatternOrDOMError || !err?.message;
+
+      if (isOfflineOrNetwork) {
         const offlineUser: User = {
           id: 'offline-merchant-local',
           email: email,
