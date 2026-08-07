@@ -142,8 +142,18 @@ export const AppUpdateWidget: React.FC<{ compact?: boolean }> = ({ compact = fal
           )}
 
           {updateState.status === 'ready_to_install' && (
-            <div className="text-xs font-medium text-emerald-700 bg-emerald-100 p-2 rounded-lg text-center">
-              {t('ready_to_install')}
+            <div className="space-y-2 pt-1">
+              <div className="text-xs font-semibold text-emerald-800 bg-emerald-100 p-2.5 rounded-lg text-center flex items-center justify-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{t('ready_to_install')}</span>
+              </div>
+              <button
+                onClick={() => updateService.relaunchApp()}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs py-2.5 rounded-lg shadow-md transition-all cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{t('relaunch_now')}</span>
+              </button>
             </div>
           )}
 

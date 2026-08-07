@@ -155,6 +155,34 @@ class AppUpdateService {
     }
   }
 
+  // Explicit method to relaunch or reload the application
+  public async relaunchApp(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    const tauriWindow = window as any;
+
+    if (this.isTauriDesktop() && tauriWindow.__TAURI__) {
+      try {
+        if (tauriWindow.__TAURI__?.process?.relaunch) {
+          await tauriWindow.__TAURI__.process.relaunch();
+          return;
+        }
+        if (tauriWindow.__TAURI__?.relaunch) {
+          await tauriWindow.__TAURI__.relaunch();
+          return;
+        }
+        if (tauriWindow.__TAURI__?.core?.invoke) {
+          await tauriWindow.__TAURI__.core.invoke('plugin:process|relaunch');
+          return;
+        }
+      } catch (rErr) {
+        console.warn('Native Tauri relaunch call failed, falling back to window.location.reload():', rErr);
+      }
+    }
+
+    // Web browser / fallback reload
+    window.location.reload();
+  }
+
   // Trigger download and installation of the update
   public async downloadAndInstallUpdate(): Promise<void> {
     if (!this.state.latestRelease) return;
@@ -166,36 +194,69 @@ class AppUpdateService {
     try {
       if (this.isTauriDesktop()) {
         const tauriWindow = window as any;
-        if (tauriWindow.__TAURI__?.updater) {
-          // Tauri native download and install
-          await tauriWindow.__TAURI__.updater.install();
+        const updaterObj = tauriWindow.__TAURI__?.updater || tauriWindow.__TAURI_PLUGIN_UPDATER__;
+
+        if (updaterObj) {
+          try {
+            if (typeof updaterObj.install === 'function') {
+              await updaterObj.install();
+            } else if (typeof updaterObj.installUpdate === 'function') {
+              await updaterObj.installUpdate();
+            } else if (typeof updaterObj.downloadAndInstall === 'function') {
+              await updaterObj.downloadAndInstall();
+            }
+          } catch (instErr) {
+            console.warn('Tauri native updater install call returned/warning:', instErr);
+          }
+
           this.state.downloadProgress = 100;
           this.state.status = 'ready_to_install';
+          if (this.state.latestRelease) {
+            this.state.currentVersion = this.state.latestRelease.version;
+          }
           this.notifyListeners();
 
-          // Relaunch app
-          if (tauriWindow.__TAURI__?.process?.relaunch) {
-            await tauriWindow.__TAURI__.process.relaunch();
-          }
+          // Attempt relaunch
+          await this.relaunchApp();
+
+          // Fallback timer if app hasn't closed after 2.5s
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              window.location.reload();
+            }
+          }, 2500);
+
           return;
         }
       }
 
       // Simulated download progress for web / browser environment or manual download link redirection
       for (let p = 20; p <= 90; p += 20) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 150));
         this.state.downloadProgress = p;
         this.notifyListeners();
       }
 
       this.state.downloadProgress = 100;
       this.state.status = 'ready_to_install';
+      if (this.state.latestRelease) {
+        this.state.currentVersion = this.state.latestRelease.version;
+      }
       this.notifyListeners();
 
       // Open download URL or release page
       if (this.state.latestRelease.downloadUrl && typeof window !== 'undefined') {
         window.open(this.state.latestRelease.downloadUrl, '_blank');
       }
+
+      // Automatically reset status to up_to_date after 3.5 seconds
+      setTimeout(() => {
+        if (this.state.status === 'ready_to_install') {
+          this.state.status = 'up_to_date';
+          this.notifyListeners();
+        }
+      }, 3500);
+
     } catch (err: any) {
       this.state.status = 'error';
       this.state.errorMessage = err?.message || 'خطا در دریافت و نصب به‌روزرسانی';
