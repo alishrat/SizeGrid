@@ -4,6 +4,7 @@ import LandingPage from './components/LandingPage';
 import DesktopLogin from './components/DesktopLogin';
 import Dashboard from './components/Dashboard';
 import Storefront from './components/Storefront';
+import { UpdateModal } from './components/UpdateModal';
 import { I18nProvider, useTranslation } from './i18n';
 
 function AppContent() {
@@ -32,6 +33,9 @@ function AppContent() {
 
   return (
     <RouterProvider>
+      {/* Global Startup Update Modal Popup */}
+      <UpdateModal />
+
       {/* 1. Root Route: Landing Page on Web, Modern Login Screen on Desktop */}
       <Route 
         pattern="/" 

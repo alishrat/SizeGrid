@@ -149,6 +149,7 @@ export interface UpdateState {
   downloadProgress: number;
   errorMessage: string | null;
   lastCheckedTime: number | null;
+  showStartupModal?: boolean;
 }
 
 export type OrderStatus = 'published' | 'draft' | 'archived' | 'completed' | 'pending' | 'cancelled';
