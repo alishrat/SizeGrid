@@ -1444,10 +1444,20 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
               )}
             </button>
 
-            <span className={`hidden lg:inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-extrabold ${darkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-300' : 'bg-neutral-100 border-neutral-200 text-neutral-700'}`}>
-              <Info className="w-3.5 h-3.5 text-amber-400" />
-              <span>{isRtl ? `کالاها: ${activeProductsCount} از ۳۰ (طرح رایگان)` : `Products: ${activeProductsCount} of 30 (Free Tier)`}</span>
-            </span>
+            {(() => {
+              const subInfo = DirectusAPI.getSubscriptionInfo();
+              return (
+                <span className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-extrabold ${darkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-300' : 'bg-neutral-100 border-neutral-200 text-neutral-700'}`}>
+                  <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="whitespace-nowrap">
+                    {subInfo.isPro
+                      ? (isRtl ? `کالاها: ${activeProductsCount} (اشتراک PRO)` : `Products: ${activeProductsCount} (PRO Plan)`)
+                      : (isRtl ? `کالاها: ${activeProductsCount} از ۳۰ (طرح رایگان)` : `Products: ${activeProductsCount} of 30 (Free Tier)`)
+                    }
+                  </span>
+                </span>
+              );
+            })()}
 
             {/* Language Controls */}
             <button
@@ -1499,6 +1509,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                 <OrdersManager
                   t={(key: string) => t[key] || key}
                   lang={lang}
+                  darkMode={darkMode}
                 />
               )}
 
@@ -1566,7 +1577,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                       ) : (
                         <>
                           {productView === 'grid' ? (
-                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                               {products
                                 .filter(prod => {
                                   const title = (isRtl ? prod.name_fa : prod.name_en) || '';
@@ -1582,7 +1593,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                 .map(prod => (
                                   <div key={prod.id} className={`rounded-xl border overflow-hidden flex flex-col justify-between backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:scale-[1.01] ${darkMode ? 'bg-neutral-900/40 border-white/10' : 'bg-white border-neutral-200 shadow-sm'}`}>
                                     <div>
-                                      <div className={`h-40 relative ${darkMode ? 'bg-neutral-950/20' : 'bg-neutral-100'}`}>
+                                      <div className={`h-36 sm:h-40 relative ${darkMode ? 'bg-neutral-950/20' : 'bg-neutral-100'}`}>
                                         {prod.image ? (
                                           <img src={prod.image} alt={prod.name_fa} className="w-full h-full object-cover" />
                                         ) : (
@@ -1591,48 +1602,48 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
                                             <span className="text-[10px]">{isRtl ? "فاقد تصویر کالا" : "No Image"}</span>
                                           </div>
                                         )}
-                                        <span className="absolute top-3 left-3 px-2 py-1 bg-sky-600 text-white rounded-lg font-bold text-[9px] shadow-sm">
+                                        <span className="absolute top-2.5 right-2.5 max-w-[75%] px-2 py-0.5 bg-sky-600/90 backdrop-blur-sm text-white rounded-md font-bold text-[10px] shadow-sm truncate whitespace-nowrap">
                                           {prod.category}
                                         </span>
                                       </div>
 
-                                      <div className="p-4 space-y-2">
-                                        <h4 className={`font-extrabold text-sm line-clamp-1 ${darkMode ? 'text-white' : 'text-neutral-900'}`}>{isRtl ? prod.name_fa : prod.name_en}</h4>
-                                        <p className={`text-[10px] line-clamp-2 leading-relaxed ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
+                                      <div className="p-3.5 space-y-1.5">
+                                        <h4 className={`font-extrabold text-xs sm:text-sm truncate ${darkMode ? 'text-white' : 'text-neutral-900'}`}>{isRtl ? prod.name_fa : prod.name_en}</h4>
+                                        <p className={`text-[10px] line-clamp-1 leading-relaxed ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
                                           {isRtl ? prod.description_fa : prod.description_en}
                                         </p>
-                                        <p className="text-xs font-black text-sky-500 pt-1">
+                                        <p className="text-xs font-black text-sky-400 pt-0.5 whitespace-nowrap">
                                           {isRtl ? `${prod.base_price.toLocaleString('fa-IR')} تومان` : `$${(prod.base_price / 50000).toFixed(1)} USD`}
                                         </p>
                                       </div>
                                     </div>
 
-                                    <div className={`p-4 border-t grid grid-cols-2 gap-2 ${darkMode ? 'border-neutral-800/40' : 'border-neutral-100 bg-neutral-50/50'}`}>
+                                    <div className={`p-3 border-t grid grid-cols-2 gap-2 ${darkMode ? 'border-neutral-800/40' : 'border-neutral-100 bg-neutral-50/50'}`}>
                                       <button
                                         onClick={() => triggerEditProductMode(prod)}
-                                        className="col-span-2 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                        className="col-span-2 py-1.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap truncate"
                                       >
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                        <span>{isRtl ? "ویرایش و تنظیمات کالا" : "Edit & Configure Product"}</span>
+                                        <Edit2 className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="truncate">{isRtl ? "ویرایش و تنظیمات کالا" : "Edit & Configure Product"}</span>
                                       </button>
 
                                       <a
                                         href={`/shop/${currentUser?.shop_slug || 'shop'}/product/${prod.id}`}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="col-span-2 py-1.5 border border-dashed border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold rounded-lg flex items-center justify-center gap-1 transition-all"
+                                        className="col-span-2 py-1 px-2 border border-dashed border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold rounded-lg flex items-center justify-center gap-1 transition-all whitespace-nowrap truncate"
                                       >
-                                        <Compass className="w-3.5 h-3.5" />
-                                        <span>{isRtl ? "پیش‌نمایش فروشگاه خریدار" : "Public Shop Preview"}</span>
+                                        <Compass className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="truncate">{isRtl ? "پیش‌نمایش فروشگاه خریدار" : "Public Shop Preview"}</span>
                                       </a>
 
                                       {prod.created_by !== 'system' && (
                                         <button
                                           onClick={() => handleDeleteProduct(prod.id)}
-                                          className="col-span-2 py-1.5 hover:bg-red-500/10 text-red-400 text-[10px] font-extrabold rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                          className="col-span-2 py-1 px-2 hover:bg-red-500/10 text-red-400 text-[10px] font-extrabold rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap truncate"
                                         >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                          <span>{t.delete}</span>
+                                          <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                          <span className="truncate">{t.delete}</span>
                                         </button>
                                       )}
                                     </div>
