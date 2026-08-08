@@ -51,6 +51,14 @@ export default function DesktopLogin({ lang, setLang, darkMode, setDarkMode }: D
     window.location.search.includes('desktop=true')
   );
 
+  // Auto-redirect if user is already logged in with a registered account
+  React.useEffect(() => {
+    const existingUser = DirectusAPI.getCurrentUser();
+    if (existingUser && existingUser.id) {
+      navigate('/dashboard');
+    }
+  }, []);
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -69,7 +77,7 @@ export default function DesktopLogin({ lang, setLang, darkMode, setDarkMode }: D
           throw new Error(isRtl ? "لطفاً تمام فیلدها را پر کنید" : "Please fill in all required fields");
         }
         await DirectusAPI.register(email, password, shopName, shopSlug);
-        setSuccess(isRtl ? "ثبت‌نام فروشگاه موفقیت‌آمیز بود! انتقال به پنل..." : "Store registration successful! Redirecting...");
+        setSuccess(isRtl ? "ثبت‌نام و ایجاد حساب با موفقیت انجام شد! انتقال به پنل..." : "Store registration successful! Redirecting...");
         setTimeout(() => {
           navigate('/dashboard');
         }, 800);
@@ -81,22 +89,30 @@ export default function DesktopLogin({ lang, setLang, darkMode, setDarkMode }: D
     }
   };
 
-  const handleQuickOfflineAccess = () => {
-    setLoading(true);
-    setSuccess(isRtl ? "ورود آفلاین سریع فعال شد. در حال راه اندازی دیتابیس محلی..." : "Fast offline login activated. Loading local database...");
+  const handleOfflineAccess = () => {
+    setError('');
+    setSuccess('');
     
-    // Create local offline session directly
-    const offlineUser = {
-      id: 'offline-merchant-local',
-      email: email || 'merchant@tankhor.local',
-      shop_name: shopName || 'فروشگاه اختصاصی تن‌خور',
-      shop_slug: shopSlug || 'tankhor-store'
-    };
-    localStorage.setItem('tankhor_user', JSON.stringify(offlineUser));
+    // Check if a registered user session exists in cache
+    const savedUserStr = localStorage.getItem('tankhor_user') || localStorage.getItem('sizegrid_user');
+    if (savedUserStr) {
+      try {
+        const savedUser = JSON.parse(savedUserStr);
+        if (savedUser && savedUser.id && savedUser.id !== 'offline-merchant-local') {
+          setSuccess(isRtl ? "نشست کاربری ثبت‌شده قبلی یافت شد. در حال ورود آفلاین..." : "Saved account session found. Logging in offline...");
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 600);
+          return;
+        }
+      } catch (e) {}
+    }
 
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 600);
+    setError(
+      isRtl
+        ? "شما هنوز در سیستم تن‌خور ثبت‌نام نکرده‌اید. لطفاً ابتدا یک‌بار با اتصال به اینترنت ثبت‌نام کنید یا وارد حساب خود شوید."
+        : "You have not registered an account yet. Please connect to the internet once to register or log in."
+    );
   };
 
   const handleDemoFill = () => {
@@ -323,28 +339,39 @@ export default function DesktopLogin({ lang, setLang, darkMode, setDarkMode }: D
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="relative my-6">
+        {/* Requirement Note & Offline Entry Button for Existing Users */}
+        <div className="relative my-5">
           <div className="absolute inset-0 flex items-center">
             <div className={`w-full border-t ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`} />
           </div>
           <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
             <span className={`px-3 ${darkMode ? 'bg-neutral-900 text-neutral-500' : 'bg-white text-neutral-400'}`}>
-              {isRtl ? "دسترسی مستقیم آفلاین" : "OR OFFLINE ACCESS"}
+              {isRtl ? "نکته مهم استفاده آفلاین" : "IMPORTANT OFFLINE NOTE"}
             </span>
           </div>
         </div>
 
-        {/* Fast Offline Direct Login Button */}
+        <div className={`p-3 rounded-2xl border text-[11px] leading-relaxed font-medium mb-4 ${darkMode ? 'bg-neutral-950/40 border-neutral-800/80 text-neutral-400' : 'bg-neutral-50 border-neutral-200 text-neutral-600'}`}>
+          <p className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <span>
+              {isRtl 
+                ? "ثبت‌نام اولیه نیازمند اینترنت است تا کاربر در سیستم ثبت گردد. پس از اولین ورود موفق، استفاده از نسخه دسکتاپ برای همیشه به‌صورت ۱۰۰٪ آفلاین و رایگان میسر خواهد بود."
+                : "Initial registration requires internet to register your user account. After first login, desktop mode works 100% offline forever."}
+            </span>
+          </p>
+        </div>
+
+        {/* Saved Session Offline Login Button */}
         <button
           type="button"
-          onClick={handleQuickOfflineAccess}
+          onClick={handleOfflineAccess}
           disabled={loading}
-          className={`w-full py-3 px-4 rounded-xl font-extrabold text-xs border flex items-center justify-center gap-2.5 transition-all cursor-pointer ${darkMode ? 'bg-neutral-950/60 border-neutral-800 text-neutral-200 hover:bg-neutral-800 hover:border-neutral-700' : 'bg-neutral-50 border-neutral-200 text-neutral-800 hover:bg-neutral-100'}`}
+          className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs border flex items-center justify-center gap-2 transition-all cursor-pointer ${darkMode ? 'bg-neutral-950/60 border-neutral-800 text-neutral-300 hover:bg-neutral-800 hover:border-neutral-700' : 'bg-neutral-50 border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
         >
-          <WifiOff className="w-4 h-4 text-emerald-400 shrink-0" />
+          <WifiOff className="w-3.5 h-3.5 text-sky-400 shrink-0" />
           <span>
-            {isRtl ? "ورود سریع آفلاین (بدون نیاز به اینترنت یا سرور)" : "Quick Offline Access (No Internet Needed)"}
+            {isRtl ? "ورود آفلاین به حساب ثبت‌شده قبلی" : "Offline Login to Registered Account"}
           </span>
         </button>
 

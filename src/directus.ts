@@ -207,13 +207,15 @@ class DirectusService {
         throw new Error("برای استفاده از نسخه وب، اتصال به اینترنت و اشتراک فعال ابری الزامی است.");
       }
 
-      // Check if previously logged in user session exists in localStorage
+      // Check if previously logged in registered user session exists in localStorage
       const savedUserStr = localStorage.getItem('tankhor_user') || localStorage.getItem('sizegrid_user');
       if (savedUserStr) {
         try {
           const savedUser = JSON.parse(savedUserStr);
-          this.user = savedUser;
-          return savedUser;
+          if (savedUser && savedUser.id && savedUser.id !== 'offline-merchant-local') {
+            this.user = savedUser;
+            return savedUser;
+          }
         } catch (e) {}
       }
 
@@ -222,23 +224,12 @@ class DirectusService {
         throw err;
       }
 
-      // On Desktop (Tauri), allow local offline merchant session fallback if offline
+      // On Desktop (Tauri), require online connection for first time registration/login
       const isPatternOrDOMError = err?.name === 'DOMException' || (err?.message && (err.message.includes('pattern') || err.message.includes('fetch')));
       const isOfflineOrNetwork = (typeof navigator !== 'undefined' && !navigator.onLine) || err instanceof TypeError || isPatternOrDOMError || !err?.message;
 
       if (isOfflineOrNetwork) {
-        const subInfo = this.getSubscriptionInfo();
-        const offlineUser: User = {
-          id: 'offline-merchant-local',
-          email: email || 'offline@tankhor.local',
-          shop_name: 'فروشگاه آفلاین من',
-          shop_slug: 'offline-store',
-          has_pro_subscription: subInfo.isPro,
-          subscription_tier: subInfo.isPro ? 'pro' : 'free'
-        };
-        this.user = offlineUser;
-        localStorage.setItem('tankhor_user', JSON.stringify(offlineUser));
-        return offlineUser;
+        throw new Error("برای نخستین ورود یا ثبت‌نام در تن‌خور، یک‌بار اتصال به اینترنت الزامی است تا کاربر در سیستم ثبت شود.");
       }
 
       throw err;
@@ -270,20 +261,12 @@ class DirectusService {
       // Automatically login after successful signup
       return this.login(email, password);
     } catch (err: any) {
-      console.warn("Registration network error, falling back to local session:", err);
+      console.warn("Registration network error:", err);
       const isPatternOrDOMError = err?.name === 'DOMException' || (err?.message && (err.message.includes('pattern') || err.message.includes('fetch')));
       const isOfflineOrNetwork = (typeof navigator !== 'undefined' && !navigator.onLine) || err instanceof TypeError || isPatternOrDOMError || !err?.message;
 
       if (isOfflineOrNetwork) {
-        const offlineUser: User = {
-          id: 'offline-merchant-local',
-          email: email,
-          shop_name: shopName || 'فروشگاه آفلاین من',
-          shop_slug: cleanSlug || 'offline-store'
-        };
-        this.user = offlineUser;
-        localStorage.setItem('tankhor_user', JSON.stringify(offlineUser));
-        return offlineUser;
+        throw new Error("برای ثبت‌نام اولیه در تن‌خور، اتصال به اینترنت الزامی است تا حساب شما در سیستم ثبت گردد.");
       }
       throw err;
     }
@@ -297,26 +280,20 @@ class DirectusService {
 
   getCurrentUser(): User | null {
     if (!this.user && typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('tankhor_user') || localStorage.getItem('sizegrid_user');
-      if (savedUser) {
+      const savedUserStr = localStorage.getItem('tankhor_user') || localStorage.getItem('sizegrid_user');
+      if (savedUserStr) {
         try {
-          this.user = JSON.parse(savedUser);
+          const parsed = JSON.parse(savedUserStr);
+          if (parsed && parsed.id && parsed.id !== 'offline-merchant-local') {
+            this.user = parsed;
+          } else {
+            localStorage.removeItem('tankhor_user');
+            this.user = null;
+          }
         } catch (e) {
           this.user = null;
         }
       }
-    }
-
-    // Default offline session if no logged in user exists yet
-    if (!this.user && typeof window !== 'undefined') {
-      const offlineUser: User = {
-        id: 'offline-merchant-local',
-        email: 'offline@tankhor.local',
-        shop_name: 'فروشگاه آفلاین من',
-        shop_slug: 'offline-store'
-      };
-      this.user = offlineUser;
-      localStorage.setItem('tankhor_user', JSON.stringify(offlineUser));
     }
 
     return this.user;
