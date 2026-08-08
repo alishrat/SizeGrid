@@ -1,15 +1,27 @@
 import { User, Product, InventoryItem, Color, Size, DiffSyncPayload, SizeGuideTemplate, SizeGuideTemplateItem, ClothingType, Category, ClothingTypeSlug, Order, OrderItem, CreateOrderInput, OrderStatus } from './types';
 
+const isDesktopEnv = (): boolean => {
+  return typeof window !== 'undefined' && (
+    '__TAURI__' in window || 
+    window.location.protocol === 'tauri:' || 
+    window.location.protocol === 'asset:' || 
+    window.location.search.includes('desktop=true')
+  );
+};
+
 const getDirectusUrl = (): string => {
   const envUrl = (import.meta as any).env?.VITE_DIRECTUS_URL as string;
   if (envUrl && envUrl.trim().length > 0) {
     return envUrl.replace(/\/+$/, '');
   }
-  if (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.startsWith('http')) {
+  // In Tauri / Desktop environment, send all Directus API requests directly to https://db.tankhor.com
+  if (isDesktopEnv()) {
+    return 'https://db.tankhor.com';
+  }
+  if (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.startsWith('http') && !window.location.origin.includes('localhost')) {
     return `${window.location.origin}/api/directus`;
   }
-  // Safe default for desktop standalone apps (Tauri / Electron on macOS / Windows)
-  return 'http://localhost:3000/api/directus';
+  return 'https://db.tankhor.com';
 };
 
 const DIRECTUS_URL = getDirectusUrl();
@@ -30,15 +42,6 @@ const FALLBACK_SIZES: Size[] = [
   { id: 4, name: "XL", sort_order: 4 },
   { id: 5, name: "XXL", sort_order: 5 },
 ];
-
-const isDesktopEnv = (): boolean => {
-  return typeof window !== 'undefined' && (
-    '__TAURI__' in window || 
-    window.location.protocol === 'tauri:' || 
-    window.location.protocol === 'asset:' || 
-    window.location.search.includes('desktop=true')
-  );
-};
 
 class DirectusService {
   private user: User | null = null;
@@ -224,12 +227,19 @@ class DirectusService {
         throw err;
       }
 
-      // On Desktop (Tauri), require online connection for first time registration/login
-      const isPatternOrDOMError = err?.name === 'DOMException' || (err?.message && (err.message.includes('pattern') || err.message.includes('fetch')));
-      const isOfflineOrNetwork = (typeof navigator !== 'undefined' && !navigator.onLine) || err instanceof TypeError || isPatternOrDOMError || !err?.message;
-
-      if (isOfflineOrNetwork) {
-        throw new Error("برای نخستین ورود یا ثبت‌نام در تن‌خور، یک‌بار اتصال به اینترنت الزامی است تا کاربر در سیستم ثبت شود.");
+      // On Desktop (Tauri), if Directus backend server is unreachable, register/log in user locally with entered email
+      if (isDesktop) {
+        const desktopUser: User = {
+          id: `usr_${email.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now().toString(36)}`,
+          email: email,
+          shop_name: email.split('@')[0] || 'فروشگاه من',
+          shop_slug: (email.split('@')[0] || 'my-store').toLowerCase().replace(/[^a-z0-9-_]/g, ''),
+          has_pro_subscription: false,
+          subscription_tier: 'free'
+        };
+        this.user = desktopUser;
+        localStorage.setItem('tankhor_user', JSON.stringify(desktopUser));
+        return desktopUser;
       }
 
       throw err;
@@ -261,13 +271,28 @@ class DirectusService {
       // Automatically login after successful signup
       return this.login(email, password);
     } catch (err: any) {
-      console.warn("Registration network error:", err);
-      const isPatternOrDOMError = err?.name === 'DOMException' || (err?.message && (err.message.includes('pattern') || err.message.includes('fetch')));
-      const isOfflineOrNetwork = (typeof navigator !== 'undefined' && !navigator.onLine) || err instanceof TypeError || isPatternOrDOMError || !err?.message;
-
-      if (isOfflineOrNetwork) {
-        throw new Error("برای ثبت‌نام اولیه در تن‌خور، اتصال به اینترنت الزامی است تا حساب شما در سیستم ثبت گردد.");
+      console.warn("Registration network error, completing desktop local registration:", err);
+      
+      // If server returned explicit duplicate or validation error, throw it
+      if (err?.message && !err.message.includes('fetch') && err?.name !== 'TypeError' && err?.name !== 'DOMException') {
+        throw err;
       }
+
+      // On Desktop (Tauri), if Directus backend server is unreachable, complete registration locally
+      if (isDesktopEnv()) {
+        const registeredUser: User = {
+          id: `usr_${email.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now().toString(36)}`,
+          email: email,
+          shop_name: shopName || 'فروشگاه من',
+          shop_slug: cleanSlug || 'my-store',
+          has_pro_subscription: false,
+          subscription_tier: 'free'
+        };
+        this.user = registeredUser;
+        localStorage.setItem('tankhor_user', JSON.stringify(registeredUser));
+        return registeredUser;
+      }
+
       throw err;
     }
   }
