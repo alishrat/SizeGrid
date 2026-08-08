@@ -608,6 +608,10 @@ export class LocalStorageAdapter implements IStorageAdapter {
     this.setItem(STORAGE_KEYS.INVENTORY, inventory);
   }
 
+  setOrdersCache(orders: Order[]): void {
+    this.setItem(STORAGE_KEYS.ORDERS, orders);
+  }
+
   // --- SYNC QUEUE & METRICS ---
   getPendingSyncQueue(): SyncQueueItem[] {
     return this.getItem<SyncQueueItem[]>(STORAGE_KEYS.SYNC_QUEUE, []);

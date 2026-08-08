@@ -202,21 +202,13 @@ export class DirectusCloudAdapter implements IStorageAdapter {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         return await this.localFallback.saveColor(nameFa, nameEn, hexCode);
       }
-      const colors = await DirectusAPI.getColors();
-      const existing = colors.find(c => c.name_fa === nameFa);
-      if (existing) {
-        this.localFallback.setColorsCache(colors);
-        return existing;
+      const created = await DirectusAPI.createColor(nameFa, nameEn, hexCode);
+      const localColors = await this.localFallback.getColors();
+      if (!localColors.find(c => c.id === created.id)) {
+        localColors.push(created);
+        this.localFallback.setColorsCache(localColors);
       }
-      const newColor = {
-        id: Math.floor(Math.random() * 1000) + 100,
-        name_fa: nameFa,
-        name_en: nameEn || nameFa,
-        hex_code: hexCode
-      };
-      colors.push(newColor);
-      this.localFallback.setColorsCache(colors);
-      return newColor;
+      return created;
     } catch (e) {
       console.warn("DirectusCloudAdapter.saveColor network error:", e);
       return await this.localFallback.saveColor(nameFa, nameEn, hexCode);

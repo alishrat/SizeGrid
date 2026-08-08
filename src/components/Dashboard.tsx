@@ -880,7 +880,8 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
           throw new Error(isRtl ? "لطفاً ابتدا قالب مورد نظر را انتخاب کنید." : "Please choose a template first.");
         }
         // Save template ID on product
-        await DirectusAPI.updateProduct(isEditingProd.id, {
+        await storageManager.saveProduct({
+          ...isEditingProd,
           size_guide_template_id: Number(prodFormTemplateId)
         });
         
@@ -888,7 +889,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
         for (const szId of selectedSizeIds) {
           const existingGuide = sizeGuidesList.find(g => g.size_id === szId);
           if (existingGuide) {
-            await DirectusAPI.deleteSizeGuide(existingGuide.id);
+            await DirectusAPI.deleteSizeGuide(existingGuide.id).catch(() => {});
           }
         }
         
@@ -935,10 +936,11 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
         }
 
         // Create new template
-        const newTpl = await DirectusAPI.createSizeGuideTemplate(newTemplateName, measurements, clothingType);
+        const newTpl = await storageManager.saveSizeGuideTemplate({ name: newTemplateName, measurements, clothing_type_slug: clothingType });
         
         // Save template ID on product
-        await DirectusAPI.updateProduct(isEditingProd.id, {
+        await storageManager.saveProduct({
+          ...isEditingProd,
           size_guide_template_id: newTpl.id
         });
 
@@ -946,12 +948,12 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
         for (const szId of selectedSizeIds) {
           const existingGuide = sizeGuidesList.find(g => g.size_id === szId);
           if (existingGuide) {
-            await DirectusAPI.deleteSizeGuide(existingGuide.id);
+            await DirectusAPI.deleteSizeGuide(existingGuide.id).catch(() => {});
           }
         }
 
         // Reload templates list
-        const tpls = await DirectusAPI.getSizeGuideTemplates();
+        const tpls = await storageManager.getSizeGuideTemplates();
         setTemplatesList(tpls);
 
         setSuccess(isRtl ? "قالب سایزبندی جدید ساخته و با موفقیت به کالا تخصیص یافت." : "New sizing template registered and assigned successfully.");
@@ -959,8 +961,9 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       else {
         // 'custom' overrides
         // 1. Remove size template mapping from product
-        await DirectusAPI.updateProduct(isEditingProd.id, {
-          size_guide_template_id: null
+        await storageManager.saveProduct({
+          ...isEditingProd,
+          size_guide_template_id: undefined as any
         });
 
         // 2. Save custom rows in size_guides collection
@@ -1082,7 +1085,7 @@ export default function Dashboard({ lang, setLang, darkMode, setDarkMode }: Dash
       const finalURL = await DirectusAPI.uploadProductImage(compressorFile);
       
       // Update product image value
-      await DirectusAPI.updateProduct(product.id, { image: finalURL });
+      await storageManager.saveProduct({ ...product, image: finalURL });
       setSuccess(isRtl ? "تصویر با موفقیت فشرده شده و به کالا اعمال شد." : "Image compressed and applied to product successfully.");
       
       // Refresh list

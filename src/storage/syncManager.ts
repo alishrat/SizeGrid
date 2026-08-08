@@ -139,18 +139,32 @@ export class StorageSyncManager implements IStorageAdapter {
     let syncedCount = 0;
 
     try {
-      // 1. Fetch current cloud state and local state safely
-      const [cloudProds, localProds, cloudCats, localCats, cloudTpls, localTpls, localInventory] = await Promise.all([
+      // 1. Fetch current cloud state and local state safely for all collections
+      const [
+        cloudProds, localProds,
+        cloudCats, localCats,
+        cloudSizes, localSizes,
+        cloudColors, localColors,
+        cloudTpls, localTpls,
+        localInventory,
+        cloudOrders, localOrders
+      ] = await Promise.all([
         this.cloudAdapter.getProducts().catch(() => []),
         this.localAdapter.getProducts().catch(() => []),
         this.cloudAdapter.getCategories().catch(() => []),
         this.localAdapter.getCategories().catch(() => []),
+        this.cloudAdapter.getSizes().catch(() => []),
+        this.localAdapter.getSizes().catch(() => []),
+        this.cloudAdapter.getColors().catch(() => []),
+        this.localAdapter.getColors().catch(() => []),
         this.cloudAdapter.getSizeGuideTemplates().catch(() => []),
         this.localAdapter.getSizeGuideTemplates().catch(() => []),
-        this.localAdapter.getInventory().catch(() => [])
+        this.localAdapter.getInventory().catch(() => []),
+        this.cloudAdapter.getOrders().catch(() => []),
+        this.localAdapter.getOrders().catch(() => [])
       ]);
 
-      // 2. Sync Categories (Local -> Cloud & Cloud -> Local)
+      // 2. Sync Categories (Local -> Cloud)
       const catIdMap = new Map<number, number>(); // localId -> cloudId
       for (const lc of localCats) {
         const cloudCatMatch = cloudCats.find(cc => cc.id === lc.id || cc.name === lc.name || cc.name_fa === lc.name);
@@ -167,12 +181,51 @@ export class StorageSyncManager implements IStorageAdapter {
         }
       }
 
-      // 3. Sync Size Guide Templates
+      // 3. Sync Sizes (Local -> Cloud)
+      const sizeIdMap = new Map<number, number>(); // localId -> cloudId
+      for (const ls of localSizes) {
+        const cloudSizeMatch = cloudSizes.find(cs => cs.id === ls.id || cs.name.toLowerCase() === ls.name.toLowerCase());
+        if (cloudSizeMatch) {
+          sizeIdMap.set(ls.id, cloudSizeMatch.id);
+        } else {
+          try {
+            const savedSize = await DirectusAPI.createSize(ls.name, ls.sort_order || 10);
+            sizeIdMap.set(ls.id, savedSize.id);
+            syncedCount++;
+          } catch (e) {
+            console.warn('Failed to push local size to cloud:', e);
+          }
+        }
+      }
+
+      // 4. Sync Colors (Local -> Cloud)
+      const colorIdMap = new Map<number, number>(); // localId -> cloudId
+      for (const lcol of localColors) {
+        const cloudColorMatch = cloudColors.find(cc => cc.id === lcol.id || cc.name_fa === lcol.name_fa);
+        if (cloudColorMatch) {
+          colorIdMap.set(lcol.id, cloudColorMatch.id);
+        } else {
+          try {
+            const savedColor = await DirectusAPI.createColor(lcol.name_fa, lcol.name_en || lcol.name_fa, lcol.hex_code);
+            colorIdMap.set(lcol.id, savedColor.id);
+            syncedCount++;
+          } catch (e) {
+            console.warn('Failed to push local color to cloud:', e);
+          }
+        }
+      }
+
+      // 5. Sync Size Guide Templates (Local -> Cloud)
       const tplIdMap = new Map<number, number>(); // localId -> cloudId
       for (const lt of localTpls) {
         const cloudTplMatch = cloudTpls.find(ct => ct.id === lt.id || ct.name === lt.name);
         if (cloudTplMatch) {
           tplIdMap.set(lt.id, cloudTplMatch.id);
+          try {
+            await DirectusAPI.updateSizeGuideTemplate(cloudTplMatch.id, lt.name, lt.measurements || [], lt.clothing_type_slug || 'tops');
+          } catch (e) {
+            console.warn('Failed to update cloud template:', e);
+          }
         } else {
           try {
             const savedTpl = await DirectusAPI.createSizeGuideTemplate(lt.name, lt.measurements || [], lt.clothing_type_slug || 'tops');
@@ -184,7 +237,7 @@ export class StorageSyncManager implements IStorageAdapter {
         }
       }
 
-      // 4. Two-Way Sync Products and Inventory Matrix
+      // 6. Two-Way Sync Products and Inventory Matrix
       const prodIdMap = new Map<number, number>(); // localProductId -> cloudProductId
 
       for (const lp of localProds) {
@@ -238,7 +291,9 @@ export class StorageSyncManager implements IStorageAdapter {
             try {
               const mappedInv = prodInv.map(inv => ({
                 ...inv,
-                product_id: finalCloudProduct!.id
+                product_id: finalCloudProduct!.id,
+                color_id: colorIdMap.get(inv.color_id) || inv.color_id,
+                size_id: sizeIdMap.get(inv.size_id) || inv.size_id
               }));
               await DirectusAPI.syncInventory(finalCloudProduct.id, mappedInv);
               syncedCount++;
@@ -249,9 +304,7 @@ export class StorageSyncManager implements IStorageAdapter {
         }
       }
 
-      // 5. Sync Orders created locally
-      const localOrders = await this.localAdapter.getOrders().catch(() => []);
-      const cloudOrders = await DirectusAPI.getOrders().catch(() => []);
+      // 7. Sync Orders created locally
       for (const lo of localOrders) {
         const cloudOrderMatch = cloudOrders.find(co => co.id === lo.id);
         if (!cloudOrderMatch && lo.order_items && lo.order_items.length > 0) {
@@ -269,20 +322,28 @@ export class StorageSyncManager implements IStorageAdapter {
           } catch (e) {
             console.warn('Failed to push local order to cloud:', e);
           }
+        } else if (cloudOrderMatch && cloudOrderMatch.status !== lo.status) {
+          try {
+            await DirectusAPI.updateOrderStatus(cloudOrderMatch.id, lo.status);
+            syncedCount++;
+          } catch (e) {
+            console.warn('Failed to update cloud order status:', e);
+          }
         }
       }
 
-      // 6. Clear pending queue after successful sync
+      // 8. Clear pending queue after successful sync
       this.localAdapter.clearPendingSyncQueue();
 
-      // 7. Pull fresh full dataset from Cloud and update local storage cache (Cloud -> Local Two-way sync)
-      const [freshProds, freshCats, freshSizes, freshColors, freshTpls, freshInv] = await Promise.all([
+      // 9. Pull fresh full dataset from Cloud and update local storage cache (Cloud -> Local Two-way sync)
+      const [freshProds, freshCats, freshSizes, freshColors, freshTpls, freshInv, freshOrders] = await Promise.all([
         DirectusAPI.getProducts().catch(() => []),
         DirectusAPI.getCategories().catch(() => []),
         DirectusAPI.getSizes().catch(() => []),
         DirectusAPI.getColors().catch(() => []),
         DirectusAPI.getSizeGuideTemplates().catch(() => []),
-        DirectusAPI.getAllInventory().catch(() => [])
+        DirectusAPI.getAllInventory().catch(() => []),
+        DirectusAPI.getOrders().catch(() => [])
       ]);
 
       if (freshProds.length > 0) this.localAdapter.setProductsCache(freshProds);
@@ -291,6 +352,7 @@ export class StorageSyncManager implements IStorageAdapter {
       if (freshColors.length > 0) this.localAdapter.setColorsCache(freshColors);
       if (freshTpls.length > 0) this.localAdapter.setTemplatesCache(freshTpls);
       if (freshInv.length > 0) this.localAdapter.setInventoryCache(freshInv);
+      if (freshOrders.length > 0) this.localAdapter.setOrdersCache(freshOrders);
 
       localStorage.setItem('tankhor_local_last_sync_time', Date.now().toString());
 

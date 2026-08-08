@@ -412,6 +412,42 @@ class DirectusService {
     return FALLBACK_COLORS;
   }
 
+  async createColor(nameFa: string, nameEn: string, hexCode: string): Promise<Color> {
+    try {
+      const currentUser = this.getCurrentUser();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (currentUser?.token) {
+        headers['Authorization'] = `Bearer ${currentUser.token}`;
+      }
+      const body = {
+        name: nameFa,
+        hex_code: hexCode
+      };
+      const response = await fetch(`${DIRECTUS_URL}/items/colors`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+      if (response.ok) {
+        const res = await response.json();
+        return {
+          id: res.data.id,
+          name_fa: res.data.name,
+          name_en: res.data.name,
+          hex_code: res.data.hex_code
+        };
+      }
+    } catch (e) {
+      console.warn("Failed to create color on Directus:", e);
+    }
+    return {
+      id: Math.floor(Math.random() * 1000) + 100,
+      name_fa: nameFa,
+      name_en: nameEn || nameFa,
+      hex_code: hexCode
+    };
+  }
+
   async getCategories(): Promise<Category[]> {
     const systemTypeToSlug: Record<number, ClothingTypeSlug> = {
       1: 'tops',
