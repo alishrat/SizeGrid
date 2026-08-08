@@ -66,16 +66,15 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
     return () => unsubscribe();
   }, []);
 
-  // Quick Demo Interactive States
+  // Quick Demo Interactive States (User Measurements)
   const [demoClothingType, setDemoClothingType] = useState<'tops' | 'bottoms' | 'footwear' | 'one_piece' | 'accessories'>('tops');
-  const [demoHeight, setDemoHeight] = useState(172);
-  const [demoWeight, setDemoWeight] = useState(68);
-  const [demoShape, setDemoShape] = useState<'slim' | 'regular' | 'athletic' | 'heavy'>('athletic');
-  const [demoIsPrecisionMode, setDemoIsPrecisionMode] = useState<boolean>(false);
-  const [demoChest, setDemoChest] = useState<number>(95);
-  const [demoWaist, setDemoWaist] = useState<number>(82);
-  const [demoHip, setDemoHip] = useState<number>(97);
-  const [demoShoulder, setDemoShoulder] = useState<number>(42);
+  const [demoChest, setDemoChest] = useState<number>(98);
+  const [demoShoulder, setDemoShoulder] = useState<number>(44);
+  const [demoSleeve, setDemoSleeve] = useState<number>(62);
+  const [demoClothLength, setDemoClothLength] = useState<number>(70);
+  const [demoWaist, setDemoWaist] = useState<number>(84);
+  const [demoHip, setDemoHip] = useState<number>(98);
+  const [demoPantsLength, setDemoPantsLength] = useState<number>(102);
   const [demoFootLength, setDemoFootLength] = useState<number>(26.5);
   const [demoResult, setDemoResult] = useState('');
   const [demoFitHint, setDemoFitHint] = useState('');
@@ -84,47 +83,8 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [wizardCalculating, setWizardCalculating] = useState<boolean>(false);
 
-  // Auto-calculate body measurements on height/weight/shape changes if not in custom mode
-  useEffect(() => {
-    if (!demoIsPrecisionMode) {
-      let chest = demoWeight * 1.4;
-      let waist = demoWeight * 1.22;
-      let hip = demoWeight * 1.4;
-      let shoulder = demoHeight * 0.23;
-      let foot = 21 + (demoHeight - 150) * 0.12 + (demoWeight - 50) * 0.03;
-
-      if (demoShape === 'slim') {
-        chest = demoWeight * 1.35 + (demoHeight - 100) * 0.1;
-        waist = demoWeight * 1.10 + (demoHeight - 100) * 0.1;
-        hip = demoWeight * 1.35 + (demoHeight - 100) * 0.1;
-        shoulder = demoHeight * 0.22 - 1;
-      } else if (demoShape === 'athletic') {
-        chest = demoWeight * 1.45 + (demoHeight - 100) * 0.1;
-        waist = demoWeight * 1.18 + (demoHeight - 100) * 0.1;
-        hip = demoWeight * 1.42 + (demoHeight - 100) * 0.1;
-        shoulder = demoHeight * 0.23 + 2;
-      } else if (demoShape === 'heavy') {
-        chest = demoWeight * 1.55 + (demoHeight - 100) * 0.1;
-        waist = demoWeight * 1.45 + (demoHeight - 100) * 0.1;
-        hip = demoWeight * 1.50 + (demoHeight - 100) * 0.1;
-        shoulder = demoHeight * 0.23 + 1;
-      } else { // regular
-        chest = demoWeight * 1.40 + (demoHeight - 100) * 0.1;
-        waist = demoWeight * 1.22 + (demoHeight - 100) * 0.1;
-        hip = demoWeight * 1.40 + (demoHeight - 100) * 0.1;
-        shoulder = demoHeight * 0.23;
-      }
-
-      setDemoChest(Math.round(chest));
-      setDemoWaist(Math.round(waist));
-      setDemoHip(Math.round(hip));
-      setDemoShoulder(Math.round(shoulder));
-      setDemoFootLength(Number(foot.toFixed(1)));
-    }
-  }, [demoHeight, demoWeight, demoShape, demoIsPrecisionMode]);
-
   const calculateDemoSize = () => {
-    // Single exact size calculations per clothing type
+    // Exact single size calculations per clothing type based on user measurements
     let bestSize = 'M';
     let hint = '';
 
@@ -135,16 +95,16 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
       else if (demoChest < 110) bestSize = 'L';
       else if (demoChest < 118) bestSize = 'XL';
       else if (demoChest < 126) bestSize = 'XXL';
-      else bestSize = 'XXXL';
-      hint = isRtl ? `محاسبه دقیق بر اساس دور سینه ${demoChest} cm و سرشانه ${demoShoulder} cm` : `Calculated for chest ${demoChest} cm`;
+      else bestSize = '3XL';
+      hint = isRtl ? `محاسبه بر اساس دور سینه ${demoChest} cm و عرض سرشانه ${demoShoulder} cm` : `Calculated for chest ${demoChest} cm & shoulder ${demoShoulder} cm`;
     } else if (demoClothingType === 'bottoms') {
-      if (demoWaist < 72) bestSize = 'S (28-29)';
-      else if (demoWaist < 80) bestSize = 'M (30-31)';
-      else if (demoWaist < 88) bestSize = 'L (32-33)';
-      else if (demoWaist < 96) bestSize = 'XL (34-36)';
-      else if (demoWaist < 106) bestSize = 'XXL (38-40)';
-      else bestSize = 'XXXL (42+)';
-      hint = isRtl ? `محاسبه دقیق بر اساس دور کمر ${demoWaist} cm و باسن ${demoHip} cm` : `Calculated for waist ${demoWaist} cm`;
+      if (demoWaist < 74) bestSize = 'S (29-30)';
+      else if (demoWaist < 82) bestSize = 'M (31-32)';
+      else if (demoWaist < 90) bestSize = 'L (33-34)';
+      else if (demoWaist < 98) bestSize = 'XL (35-36)';
+      else if (demoWaist < 108) bestSize = 'XXL (38-40)';
+      else bestSize = '3XL (42+)';
+      hint = isRtl ? `محاسبه بر اساس دور کمر ${demoWaist} cm و باسن ${demoHip} cm` : `Calculated for waist ${demoWaist} cm & hip ${demoHip} cm`;
     } else if (demoClothingType === 'footwear') {
       if (demoFootLength <= 23.5) bestSize = '37';
       else if (demoFootLength <= 24.2) bestSize = '38';
@@ -155,13 +115,13 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
       else if (demoFootLength <= 28.0) bestSize = '43';
       else if (demoFootLength <= 28.8) bestSize = '44';
       else bestSize = '45';
-      hint = isRtl ? `بر اساس طول پا ${demoFootLength} cm (استاندارد EU)` : `Calculated for foot length ${demoFootLength} cm`;
+      hint = isRtl ? `بر اساس طول پا ${demoFootLength} cm (استاندارد EU)` : `Calculated for foot length ${demoFootLength} cm (EU Standard)`;
     } else if (demoClothingType === 'one_piece') {
-      if (demoHeight < 162 && demoChest < 90) bestSize = 'S';
-      else if (demoHeight < 174 && demoChest < 100) bestSize = 'M';
-      else if (demoHeight < 185 && demoChest < 110) bestSize = 'L';
+      if (demoChest < 90 && demoWaist < 75) bestSize = 'S';
+      else if (demoChest < 100 && demoWaist < 85) bestSize = 'M';
+      else if (demoChest < 110 && demoWaist < 95) bestSize = 'L';
       else bestSize = 'XL';
-      hint = isRtl ? `بر اساس قد کلی ${demoHeight} cm و ترکیب بدنی` : `Calculated for total height & body shape`;
+      hint = isRtl ? `بر اساس ترکیب دور سینه ${demoChest} cm و دور کمر ${demoWaist} cm` : `Calculated for bust ${demoChest} cm & waist ${demoWaist} cm`;
     } else {
       bestSize = isRtl ? "تک‌سایز (Free Size)" : "Free Size";
       hint = isRtl ? "مناسب تمام اندازه‌های استاندارد" : "Fits all standard sizes";
@@ -213,241 +173,119 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
     <div className={`min-h-screen font-sans ${darkMode ? 'bg-neutral-950 text-neutral-100' : 'bg-neutral-50 text-neutral-900'} transition-colors duration-300`}>
       
       {/* STICKY TOP NAVIGATION BAR */}
-      <header className={`sticky top-0 z-50 backdrop-blur-xl border-b ${darkMode ? 'bg-neutral-950/85 border-white/10' : 'bg-white/85 border-neutral-200'} px-4 sm:px-8 py-3.5 transition-all`}>
+      <header className={`sticky top-0 z-50 backdrop-blur-xl border-b ${darkMode ? 'bg-neutral-950/85 border-white/10' : 'bg-white/85 border-neutral-200'} px-3 sm:px-8 py-3 transition-all`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           
-          {/* Logo & Brand Identity */}
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-tr from-sky-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-sky-500/20">
-              <Grid3X3 className="w-5 h-5 animate-pulse" />
+          {/* Logo & Brand Identity (Clean title next to logo, no tagline) */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 sm:p-2.5 bg-gradient-to-tr from-sky-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-sky-500/20 shrink-0">
+              <Grid3X3 className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                  {t.brand_name}
-                </span>
-                <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full font-black">
-                  v2.5
-                </span>
-              </div>
-              <p className="text-[10px] text-neutral-400 font-medium tracking-wide leading-none mt-0.5">
-                {t.tagline}
-              </p>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                {t.brand_name}
+              </span>
+              <span className="text-[9px] sm:text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1.5 sm:px-2 py-0.5 rounded-full font-black">
+                v2.5
+              </span>
             </div>
           </div>
 
-          {/* Quick Storage Architecture Indicator & Actions */}
-          <div className="flex items-center gap-3">
+          {/* Header Action Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
 
             {/* Language Toggle */}
             <button
               onClick={() => setLang(lang === 'fa' ? 'en' : 'fa')}
-              className={`p-2 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-900' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
+              className={`p-1.5 sm:p-2 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-900' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
               aria-label="Toggle language"
               title={lang === 'fa' ? 'English' : 'فارسی'}
             >
-              <Globe className="w-4 h-4 text-sky-400" />
+              <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400" />
             </button>
 
             {/* Theme Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-900' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
+              className={`p-1.5 sm:p-2 rounded-xl border transition-all cursor-pointer ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-900' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
               aria-label="Toggle theme"
             >
-              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
+              {darkMode ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600" />}
             </button>
             
             {/* Direct Login Button */}
             <button
               onClick={() => navigate('/login')}
-              className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-900' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
+              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold rounded-xl border transition-all cursor-pointer ${darkMode ? 'border-neutral-800 text-neutral-300 hover:bg-neutral-900' : 'border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}
             >
               {isRtl ? "ورود به پنل" : "Login"}
             </button>
 
-            {/* Download CTA Header Button */}
+            {/* Summarized Desktop Download Icon Button */}
             <a
               href="#download-section"
-              className="hidden sm:inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 rounded-xl shadow-md hover:shadow-sky-500/20 transition-all cursor-pointer"
+              className="p-1.5 sm:p-2.5 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 text-white hover:from-sky-500 hover:to-indigo-500 transition-all shadow-md shadow-sky-600/20 flex items-center justify-center cursor-pointer group"
+              title={isRtl ? "دانلود رایگان نرم‌افزار دسکتاپ تن‌خور" : "Download Tankhor Desktop App"}
+              aria-label="Download Desktop App"
             >
-              <Laptop className="w-3.5 h-3.5" />
-              <span>{isRtl ? "دانلود رایگان دسکتاپ" : "Download Desktop Free"}</span>
+              <Laptop className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:scale-110" />
             </a>
           </div>
         </div>
       </header>
 
-      {/* HERO SECTION */}
-      <section className="relative px-4 sm:px-8 pt-12 pb-20 overflow-hidden">
-        {/* Glow ambient background circles */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-sky-500/15 via-indigo-500/10 to-purple-500/15 rounded-full blur-[140px] pointer-events-none" />
+      {/* MINIMALIST HERO SECTION WITH GENEROUS NEGATIVE SPACE */}
+      <section className="relative px-4 sm:px-8 py-20 sm:py-28 overflow-hidden">
+        {/* Soft subtle glow background */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-sky-500/10 via-indigo-500/5 to-purple-500/10 rounded-full blur-[140px] pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-center relative z-10">
+        <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
           
-          {/* Hero Left Content */}
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-right">
-            
-            {/* Top Pill Tag */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-black shadow-sm">
-              <Sparkles className="w-4 h-4 text-sky-400 animate-spin-slow" />
-              <span>{isRtl ? "پلتفرم اختصاصی دسکتاپ مدیریت پوشاک و سایز (۱۰۰٪ رایگان و آفلاین)" : "Free Desktop Platform for Apparel Inventory & Sizing (100% Offline)"}</span>
-            </div>
-            
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
-              {isRtl ? "مدیریت حرفه‌ای پوشاک و سایز، کاملاً رایگان روی دسکتاپ" : "Professional Apparel & Size Management Free on Desktop"}
-            </h1>
-            
-            <p className={`text-sm sm:text-base ${darkMode ? 'text-neutral-300' : 'text-neutral-600'} leading-relaxed max-w-2xl mx-auto lg:mx-0 font-medium`}>
-              {isRtl ? "نرم‌افزار دسکتاپ تن‌خور بدون نیاز به اینترنت و بدون هزینه اشتراک به صورت ۱۰۰٪ آفلاین روی ویندوز، مک و لینوکس اجرا می‌شود. مدیریت انبار پوشاک، ماتریس سایز/رنگ و راهنمای سایز اختصاصی مشتریان را رایگان تجربه کنید." : "Tankhor desktop app runs 100% offline with zero subscription fees on Windows, macOS, and Linux. Easily manage garment inventory, size matrices, and customer size guides locally."}
-            </p>
+          {/* Subtle Pill Tag */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[11px] font-bold shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+            <span>{isRtl ? "نسخه دسکتاپ تن‌خور (۱۰۰٪ رایگان و آفلاین)" : "Tankhor Free Desktop App (100% Offline)"}</span>
+          </div>
+          
+          {/* Clean Headline */}
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight max-w-3xl mx-auto">
+            {isRtl ? "مدیریت پوشاک و راهنمای سایز اختصاصی، رایگان روی دسکتاپ" : "Free Desktop Apparel & Size Guide Management"}
+          </h1>
+          
+          {/* Small & Clean Text */}
+          <p className={`text-xs sm:text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} leading-relaxed max-w-xl mx-auto font-normal`}>
+            {isRtl ? "بدون نیاز به اینترنت یا هزینه اشتراک. انبارداری متقاطع سایز/رنگ، ماتریس موجودی و ویجت هوشمند پیشنهاد سایز را روی ویندوز و مک تجربه کنید." : "Run 100% offline with zero subscription fees. Manage garment inventories and size matrices on Windows and macOS."}
+          </p>
 
-            {/* CTAs */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
-              <a
-                href="#download-section"
-                className="px-7 py-3.5 font-black text-xs text-white bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 rounded-xl shadow-xl shadow-sky-600/20 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Laptop className="w-4 h-4" />
-                <span>{isRtl ? "دانلود مستقیم نسخه دسکتاپ (رایگان)" : "Download Free Desktop App"}</span>
-                {isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </a>
-              
-              <a
-                href="#demo-interactive-section"
-                className={`px-6 py-3.5 font-bold text-xs border rounded-xl hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer ${darkMode ? 'border-white/10 text-neutral-200' : 'border-neutral-300 text-neutral-800'}`}
-              >
-                <Sliders className="w-4 h-4 text-sky-400" />
-                <span>{isRtl ? "تست آنلاین ویجت پیشنهاد سایز" : "Try Sizing Widget"}</span>
-              </a>
-            </div>
+          {/* Minimalist Desktop Software Download Actions (Windows & macOS - No Linux) */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5" id="download-section">
+            <a
+              href="#download-windows"
+              onClick={(e) => {
+                e.preventDefault();
+                alert(isRtl ? "دانلود نسخه ویندوز تن‌خور شروع شد (Tankhor_Setup.exe)" : "Downloading Windows version (Tankhor_Setup.exe)");
+              }}
+              className="w-full sm:w-auto px-6 py-3.5 font-bold text-xs text-white bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 rounded-xl shadow-lg shadow-sky-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Laptop className="w-4 h-4" />
+              <span>{isRtl ? "دانلود نسخه ویندوز (Windows .exe)" : "Download for Windows (.exe)"}</span>
+            </a>
 
-            {/* Quick Metrics / Stats Grid */}
-            <div className="pt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-white/10 max-w-xl mx-auto lg:mx-0">
-              <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
-                <p className="text-xl font-black text-emerald-400">۱۰۰٪</p>
-                <p className="text-[11px] text-neutral-400 mt-0.5 font-bold">{isRtl ? "رایگان برای دسکتاپ" : "100% Free Desktop"}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
-                <p className="text-xl font-black text-sky-400">آفلاین</p>
-                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "دیتابیس محلی بدون اینترنت" : "No Internet Needed"}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
-                <p className="text-xl font-black text-indigo-400">%۳۴-</p>
-                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "کاهش مرجوعی سایز" : "Less Size Returns"}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 text-center lg:text-right">
-                <p className="text-xl font-black text-amber-400">۰ms</p>
-                <p className="text-xs text-neutral-400 mt-0.5 font-bold">{isRtl ? "سرعت اجرای دسکتاپ" : "Instant Performance"}</p>
-              </div>
-            </div>
-
+            <a
+              href="#download-mac"
+              onClick={(e) => {
+                e.preventDefault();
+                alert(isRtl ? "دانلود نسخه مک تن‌خور شروع شد (Tankhor_macOS.dmg)" : "Downloading macOS version (Tankhor_macOS.dmg)");
+              }}
+              className={`w-full sm:w-auto px-6 py-3.5 font-bold text-xs border rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${darkMode ? 'border-neutral-800 hover:bg-neutral-900 text-neutral-300' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-800'}`}
+            >
+              <span>{isRtl ? "دانلود نسخه مک (macOS .dmg)" : "Download for macOS (.dmg)"}</span>
+            </a>
           </div>
 
-          {/* Right Desktop Feature & Download Card */}
-          <div className="lg:col-span-5" id="download-section">
-            <div className={`p-6 sm:p-8 rounded-3xl border backdrop-blur-2xl shadow-2xl transition-all relative ${darkMode ? 'bg-neutral-900/90 border-white/10 shadow-sky-950/20' : 'bg-white/95 border-neutral-200 shadow-neutral-300/40'}`}>
-              
-              {/* Card Header */}
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                    <Laptop className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className={`text-sm font-extrabold ${darkMode ? 'text-neutral-100' : 'text-neutral-900'}`}>
-                      {isRtl ? "نسخه رایگان دسکتاپ تن‌خور" : "Tankhor Free Desktop App"}
-                    </h3>
-                    <p className="text-[11px] text-neutral-400">
-                      {isRtl ? "بدون محدودیت زمانی و بدون نیاز به ثبت‌نام" : "No time limit • No signup required"}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-black">
-                  {isRtl ? "۱۰۰٪ رایگان" : "100% Free"}
-                </span>
-              </div>
-
-              {/* Feature Highlights List */}
-              <div className="space-y-3 mb-6 text-xs">
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>
-                    {isRtl ? "کارکرد کامل به‌صورت آفلاین محلی (Local Storage Adapter)" : "Runs completely offline with local storage adapter"}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>
-                    {isRtl ? "مدیریت قالب‌های راهنمای سایز و انبارداری پوشاک" : "Full size guide matrix and apparel inventory management"}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>
-                    {isRtl ? "قابلیت همگام‌سازی ابری اختیاری (ویژه مشترکین PRO)" : "Optional two-way cloud sync for PRO subscribers"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Direct Desktop Download Links */}
-              <div className="space-y-2.5 pt-2">
-                <a
-                  href="#download-windows"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert(isRtl ? "دانلود نسخه ویندوز دسکتاپ تن‌خور شروع شد (Tankhor_Setup.exe)" : "Starting Windows download (Tankhor_Setup.exe)");
-                  }}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold rounded-xl shadow-lg shadow-sky-600/20 transition-all text-xs flex items-center justify-between cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Laptop className="w-4 h-4" />
-                    <span>{isRtl ? "دانلود نسخه ویندوز (Windows .exe)" : "Download for Windows (.exe)"}</span>
-                  </div>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded font-mono">v2.5.0</span>
-                </a>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <a
-                    href="#download-mac"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert(isRtl ? "دانلود نسخه مک دسکتاپ تن‌خور شروع شد (Tankhor_macOS.dmg)" : "Starting macOS download (Tankhor_macOS.dmg)");
-                    }}
-                    className={`py-2.5 px-3 border rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${darkMode ? 'border-neutral-800 hover:bg-neutral-800 text-neutral-300' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-800'}`}
-                  >
-                    <span>{isRtl ? "نسخه مک (macOS)" : "macOS (.dmg)"}</span>
-                  </a>
-
-                  <a
-                    href="#download-linux"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert(isRtl ? "دانلود نسخه لینوکس دسکتاپ تن‌خور شروع شد (Tankhor.AppImage)" : "Starting Linux download (Tankhor.AppImage)");
-                    }}
-                    className={`py-2.5 px-3 border rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${darkMode ? 'border-neutral-800 hover:bg-neutral-800 text-neutral-300' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-800'}`}
-                  >
-                    <span>{isRtl ? "لینوکس (Linux)" : "Linux (.AppImage)"}</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Existing Subscriber Login Redirect */}
-              <div className="mt-5 pt-4 border-t border-white/10 text-center">
-                <p className="text-[11px] text-neutral-400 mb-2">
-                  {isRtl ? "مشترک ویژه PRO هستید و می‌خواهید از نسخه وب استفاده کنید؟" : "Already a PRO subscriber wanting to access Web Panel?"}
-                </p>
-                <button
-                  onClick={() => navigate('/login')}
-                  className="px-4 py-2 text-xs font-black text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
-                  <span>{isRtl ? "ورود به پنل آنلاین وب" : "Login to Web Panel"}</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
+          <p className="text-[11px] text-neutral-500 font-medium">
+            {isRtl ? "بدون محدودیت زمانی • ۱۰۰٪ رایگان • ویژه ویندوز و مک" : "No time limit • 100% Free • Windows & macOS"}
+          </p>
 
         </div>
       </section>
@@ -673,13 +511,13 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
               </div>
             )}
 
-            {/* STEP 2: MEASUREMENTS & BODY SHAPE */}
+            {/* STEP 2: USER MEASUREMENTS */}
             {wizardStep === 2 && (
               <div className="space-y-6">
                 <div className="text-center">
-                  <h3 className="text-base font-extrabold">{isRtl ? "گام ۲: مشخصات بدنی یا طول پا را تعیین کنید" : "Step 2: Enter Body Dimensions"}</h3>
+                  <h3 className="text-base font-extrabold">{isRtl ? "گام ۲: اندازه‌های دقیق کاربر را وارد کنید" : "Step 2: Enter Body Measurements"}</h3>
                   <p className={`text-xs mt-1 ${darkMode ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                    {demoClothingType === 'footwear' ? (isRtl ? "طول پا از پاشنه تا شست" : "Foot length in cm") : (isRtl ? "قد و وزن را مشخص کنید تا فرم اندام شما تحلیل شود." : "Height and weight for smart fitting.")}
+                    {demoClothingType === 'footwear' ? (isRtl ? "طول پا از پاشنه تا بلندترین انگشت" : "Foot length in cm") : (isRtl ? "اندازه‌های دقیق خود را وارد کنید تا بهترین سایز محاسبه شود." : "Enter your exact measurements for size calculation.")}
                   </p>
                 </div>
 
@@ -703,93 +541,125 @@ export default function LandingPage({ lang, setLang, darkMode, setDarkMode }: La
                   <div className="p-4 rounded-xl bg-neutral-900/40 border border-neutral-800 text-center text-xs font-bold text-neutral-400">
                     {isRtl ? "اکسسوری‌ها معمولاً تک‌سایز (Free Size) می‌باشند." : "Accessories are standard Free Size."}
                   </div>
+                ) : demoClothingType === 'bottoms' ? (
+                  <div className="space-y-5 max-w-lg mx-auto">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {/* Waist Slider */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                          <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{isRtl ? "دور کمر (cm):" : "Waist (cm):"}</span>
+                          <span className="text-sky-500 font-black">{demoWaist} cm</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="65"
+                          max="125"
+                          value={demoWaist}
+                          onChange={(e) => setDemoWaist(Number(e.target.value))}
+                          className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                        />
+                      </div>
+
+                      {/* Hip Slider */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                          <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{isRtl ? "دور باسن (cm):" : "Hip (cm):"}</span>
+                          <span className="text-sky-500 font-black">{demoHip} cm</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="80"
+                          max="135"
+                          value={demoHip}
+                          onChange={(e) => setDemoHip(Number(e.target.value))}
+                          className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pants Length Slider */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{isRtl ? "قد شلوار (cm):" : "Pants Length (cm):"}</span>
+                        <span className="text-sky-500 font-black">{demoPantsLength} cm</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="88"
+                        max="118"
+                        value={demoPantsLength}
+                        onChange={(e) => setDemoPantsLength(Number(e.target.value))}
+                        className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                      />
+                    </div>
+                  </div>
                 ) : (
-                  <div className="space-y-5">
-                    {/* Quick Profile Presets */}
-                    <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
-                      <span className="text-[11px] font-bold text-neutral-400 shrink-0">{isRtl ? "میانبرهای سریع:" : "Quick Presets:"}</span>
-                      {[
-                        { label: '۱۶۵ / ۵۸ کگ', h: 165, w: 58, s: 'slim' },
-                        { label: '۱۷۵ / ۷۰ کگ', h: 175, w: 70, s: 'regular' },
-                        { label: '۱۸۲ / ۸۲ کگ', h: 182, w: 82, s: 'athletic' },
-                        { label: '۱۹۰ / ۹۸ کگ', h: 190, w: 98, s: 'heavy' },
-                      ].map((p, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            setDemoHeight(p.h);
-                            setDemoWeight(p.w);
-                            setDemoShape(p.s as any);
-                          }}
-                          className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap ${
-                            demoHeight === p.h && demoWeight === p.w 
-                              ? 'bg-sky-500/10 border-sky-500 text-sky-400' 
-                              : (darkMode ? 'border-neutral-800 text-neutral-400 hover:text-neutral-200' : 'border-neutral-200 text-neutral-600')
-                          }`}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-6">
-                      {/* Height Slider */}
+                  <div className="space-y-5 max-w-lg mx-auto">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {/* Chest Slider */}
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-xs font-bold">
-                          <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{t.height_cm}</span>
-                          <span className="text-sky-500 font-black">{demoHeight} cm</span>
+                          <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{isRtl ? "دور سینه (cm):" : "Chest (cm):"}</span>
+                          <span className="text-sky-500 font-black">{demoChest} cm</span>
                         </div>
                         <input
                           type="range"
-                          min="140"
-                          max="220"
-                          value={demoHeight}
-                          onChange={(e) => setDemoHeight(Number(e.target.value))}
+                          min="80"
+                          max="135"
+                          value={demoChest}
+                          onChange={(e) => setDemoChest(Number(e.target.value))}
                           className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
                         />
                       </div>
 
-                      {/* Weight Slider */}
+                      {/* Shoulder Slider */}
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-xs font-bold">
-                          <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{t.weight_kg}</span>
-                          <span className="text-sky-500 font-black">{demoWeight} kg</span>
+                          <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{isRtl ? "عرض سرشانه (cm):" : "Shoulder Width (cm):"}</span>
+                          <span className="text-sky-500 font-black">{demoShoulder} cm</span>
                         </div>
                         <input
                           type="range"
-                          min="40"
-                          max="140"
-                          value={demoWeight}
-                          onChange={(e) => setDemoWeight(Number(e.target.value))}
+                          min="38"
+                          max="58"
+                          value={demoShoulder}
+                          onChange={(e) => setDemoShoulder(Number(e.target.value))}
                           className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
                         />
                       </div>
                     </div>
 
-                    {/* Body Shape Options */}
-                    <div>
-                      <label className="block text-xs font-bold mb-2 text-neutral-400">{t.body_shape}</label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[
-                          { id: 'slim', label: t.shape_slim },
-                          { id: 'regular', label: isRtl ? 'معمولی' : 'Regular' },
-                          { id: 'athletic', label: t.shape_athletic },
-                          { id: 'heavy', label: t.shape_heavy },
-                        ].map(s => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => setDemoShape(s.id as any)}
-                            className={`py-2 text-center text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                              demoShape === s.id 
-                                ? 'bg-sky-500/10 border-sky-500 text-sky-400' 
-                                : (darkMode ? 'border-neutral-800 text-neutral-400' : 'border-neutral-200 text-neutral-600')
-                            }`}
-                          >
-                            {s.label}
-                          </button>
-                        ))}
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {/* Sleeve Slider */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                          <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{isRtl ? "طول آستین (cm):" : "Sleeve Length (cm):"}</span>
+                          <span className="text-sky-500 font-black">{demoSleeve} cm</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="50"
+                          max="72"
+                          value={demoSleeve}
+                          onChange={(e) => setDemoSleeve(Number(e.target.value))}
+                          className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                        />
+                      </div>
+
+                      {/* Cloth Length Slider */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                          <span className={darkMode ? 'text-neutral-300' : 'text-neutral-700'}>{isRtl ? "قد لباس (cm):" : "Cloth Length (cm):"}</span>
+                          <span className="text-sky-500 font-black">{demoClothLength} cm</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="60"
+                          max="95"
+                          value={demoClothLength}
+                          onChange={(e) => setDemoClothLength(Number(e.target.value))}
+                          className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                        />
                       </div>
                     </div>
                   </div>
